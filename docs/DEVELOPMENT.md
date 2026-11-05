@@ -93,6 +93,8 @@ open MegaNugget.xcodeproj
 Swift Package содержит только Core; приложение собирается Xcode. Генерируемый проект
 не хранится в git, источник настройки — `project.yml`. Для устройства выберите Signing
 Team/Bundle ID в Xcode и действующий provisioning. Не добавляйте jailbreak entitlements.
+`swift-tools-version: 5.9` в Package.swift — версия инструментов SwiftPM;
+`SWIFT_VERSION: 5.0` в Xcode — режим языка Swift 5, не требование старого компилятора.
 Сведения о подписи: [CODE_SIGNING.md](CODE_SIGNING.md).
 
 ## Проверки перед PR
