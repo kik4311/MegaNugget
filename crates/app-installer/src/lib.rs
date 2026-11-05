@@ -25,6 +25,88 @@ pub struct ValidatedIpa {
     snapshot: NamedTempFile,
 }
 
+impl ValidatedIpa {
+    /// Explicit user-selected export; includes a private provisioning profile.
+    pub fn save(&self, destination: &Path) -> Result<(), InstallError> {
+        std::fs::copy(self.snapshot.path(), destination).map_err(|_| InstallError::Io)?;
+        Ok(())
+    }
+}
+
+/// An unsigned candidate cannot be passed to install(). Only the signing path accepts it.
+pub struct SigningInput {
+    pub info: IpaInfo,
+    snapshot: NamedTempFile,
+}
+
+impl SigningInput {
+    /// Extract only into a fresh, private directory owned by the caller.
+    pub fn extract(&self, destination: &Path) -> Result<std::path::PathBuf, InstallError> {
+        let mut zip =
+            ZipArchive::new(self.snapshot.as_file()).map_err(|_| InstallError::InvalidIpa)?;
+        let mut app_root = None;
+        let mut actual_total = 0u64;
+        for i in 0..zip.len() {
+            let mut entry = zip.by_index(i).map_err(|_| InstallError::InvalidIpa)?;
+            let enclosed = entry.enclosed_name().ok_or(InstallError::UnsafeArchive)?;
+            if !enclosed.starts_with("Payload") {
+                continue;
+            }
+            let parts: Vec<_> = enclosed.components().collect();
+            if parts.len() >= 2 && parts[1].as_os_str().to_string_lossy().ends_with(".app") {
+                app_root = Some(destination.join("Payload").join(parts[1].as_os_str()));
+            }
+            let path = destination.join(enclosed);
+            if entry.is_dir() {
+                std::fs::create_dir_all(&path).map_err(|_| InstallError::Io)?;
+                continue;
+            }
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent).map_err(|_| InstallError::Io)?;
+            }
+            let mut output = std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)
+                .map_err(|_| InstallError::Io)?;
+            let declared = entry.size();
+            let size = std::io::copy(&mut entry.by_ref().take(declared + 1), &mut output)
+                .map_err(|_| InstallError::InvalidIpa)?;
+            actual_total = actual_total
+                .checked_add(size)
+                .ok_or(InstallError::SizeLimit)?;
+            if size != declared || actual_total > MAX_EXPANDED {
+                return Err(InstallError::SizeLimit);
+            }
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                output
+                    .set_permissions(std::fs::Permissions::from_mode(0o700))
+                    .map_err(|_| InstallError::Io)?;
+            }
+        }
+        app_root.ok_or(InstallError::InvalidIpa)
+    }
+}
+
+pub fn inspect_for_signing(path: &Path) -> Result<SigningInput, InstallError> {
+    let snapshot = snapshot_ipa(path)?;
+    let info = validate(snapshot.as_file(), false)?;
+    // Initial signing scope: our own simple app only, never special-app injection paths.
+    if info.bundle_id != "org.meganugget.ios" {
+        return Err(InstallError::UnsupportedSigningBundle);
+    }
+    let zip = ZipArchive::new(snapshot.as_file()).map_err(|_| InstallError::InvalidIpa)?;
+    if zip
+        .file_names()
+        .any(|n| n.contains("/Frameworks/") || n.contains("/PlugIns/") || n.ends_with(".dylib"))
+    {
+        return Err(InstallError::UnsupportedSigningBundle);
+    }
+    Ok(SigningInput { info, snapshot })
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum InstallError {
@@ -32,6 +114,7 @@ pub enum InstallError {
     UnsafeArchive,
     SizeLimit,
     MissingSigningArtifacts,
+    UnsupportedSigningBundle,
     Io,
     InvalidDevice,
     UnsupportedTool,
@@ -58,6 +141,12 @@ struct AppPlist {
 /// Snapshot first: the source path cannot be swapped between validation and install.
 /// No archive members are extracted. Signing artifacts are not signature validation.
 pub fn inspect(path: &Path) -> Result<ValidatedIpa, InstallError> {
+    let snapshot = snapshot_ipa(path)?;
+    let info = validate_archive(snapshot.as_file())?;
+    Ok(ValidatedIpa { info, snapshot })
+}
+
+fn snapshot_ipa(path: &Path) -> Result<NamedTempFile, InstallError> {
     if !path
         .extension()
         .is_some_and(|x| x.eq_ignore_ascii_case("ipa"))
@@ -80,11 +169,14 @@ pub fn inspect(path: &Path) -> Result<ValidatedIpa, InstallError> {
     snapshot
         .seek(SeekFrom::Start(0))
         .map_err(|_| InstallError::Io)?;
-    let info = validate_archive(snapshot.as_file())?;
-    Ok(ValidatedIpa { info, snapshot })
+    Ok(snapshot)
 }
 
 fn validate_archive(file: &File) -> Result<IpaInfo, InstallError> {
+    validate(file, true)
+}
+
+fn validate(file: &File, require_signing: bool) -> Result<IpaInfo, InstallError> {
     let mut zip = ZipArchive::new(file).map_err(|_| InstallError::InvalidIpa)?;
     if zip.len() > 20_000 {
         return Err(InstallError::SizeLimit);
@@ -156,23 +248,30 @@ fn validate_archive(file: &File) -> Result<IpaInfo, InstallError> {
     {
         return Err(InstallError::InvalidIpa);
     }
-    for name in [
-        &app.executable[..],
-        "_CodeSignature/CodeResources",
-        "embedded.mobileprovision",
-    ] {
-        if !zip
-            .by_name(&format!("{root}{name}"))
-            .is_ok_and(|e| e.size() > 0)
-        {
-            return Err(InstallError::MissingSigningArtifacts);
-        }
+    let signing_artifacts = ["_CodeSignature/CodeResources", "embedded.mobileprovision"]
+        .iter()
+        .all(|name| {
+            zip.by_name(&format!("{root}{name}"))
+                .is_ok_and(|e| e.size() > 0)
+        });
+    if !zip
+        .by_name(&format!("{root}{}", app.executable))
+        .is_ok_and(|e| e.size() > 0)
+    {
+        return Err(InstallError::MissingSigningArtifacts);
+    }
+    if require_signing && !signing_artifacts {
+        return Err(InstallError::MissingSigningArtifacts);
     }
     Ok(IpaInfo {
         bundle_id: app.bundle_id,
         version: app.version,
         minimum_ios: app.minimum_ios,
-        signing: "artifacts_present_not_verified",
+        signing: if signing_artifacts {
+            "artifacts_present_not_verified"
+        } else {
+            "requires_signing"
+        },
     })
 }
 
@@ -274,6 +373,32 @@ mod tests {
             Err(InstallError::MissingSigningArtifacts)
         ));
     }
+    #[test]
+    fn unsigned_can_only_enter_signing_path() {
+        let file = fixture(None, false);
+        assert!(inspect(file.path()).is_err());
+        let input = inspect_for_signing(file.path()).unwrap();
+        assert_eq!(input.info.signing, "requires_signing");
+        let destination = tempfile::tempdir().unwrap();
+        let app = input.extract(destination.path()).unwrap();
+        assert!(app.join("MegaNugget").is_file());
+        assert!(app.join("Info.plist").is_file());
+        assert!(!app.join("embedded.mobileprovision").exists());
+    }
+
+    #[test]
+    fn signing_rejects_extensions_and_unsafe_paths() {
+        for extra in [
+            "Payload/MegaNugget.app/PlugIns/Extension.appex/file",
+            "Payload/MegaNugget.app/Frameworks/Other.framework/file",
+            "Payload/MegaNugget.app/Injected.dylib",
+            "../bad",
+        ] {
+            let file = fixture(Some(extra), false);
+            assert!(inspect_for_signing(file.path()).is_err());
+        }
+    }
+
     #[test]
     fn traversal_rejected() {
         assert!(matches!(

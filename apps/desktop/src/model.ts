@@ -30,6 +30,28 @@ export interface Ipa {
   minimum_ios: string;
   signing: string;
 }
+
+export type SigningPhase =
+  | "idle"
+  | "authenticating"
+  | "two_factor"
+  | "select_team"
+  | "provisioning"
+  | "signing"
+  | "signed"
+  | "failed"
+  | "cancelled";
+export interface SigningView {
+  status: {
+    phase: SigningPhase;
+    teams: { id: string; name: string }[];
+    error: string | null;
+  };
+  ipa: Ipa | null;
+}
+export function signingActive(phase: SigningPhase): boolean {
+  return !["idle", "signed", "failed", "cancelled"].includes(phase);
+}
 export interface Entry {
   timestamp: number;
   level: "info" | "warning" | "error";
@@ -62,7 +84,7 @@ export function canInstall(
 ): boolean {
   return (
     !busy &&
-    !!ipa &&
+    ipa?.signing === "artifacts_present_not_verified" &&
     !!scan?.installer.Ok &&
     !scan.failure &&
     !!selected?.device.info &&

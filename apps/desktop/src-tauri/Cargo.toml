@@ -15,4 +15,8 @@ device-manager = { path = "../../../crates/device-manager" }
 compatibility = { path = "../../../crates/compatibility" }
 diagnostics = { path = "../../../crates/diagnostics" }
 app-installer = { path = "../../../crates/app-installer" }
+apple-signing = { path = "../../../crates/apple-signing" }
+zeroize = "1"
+tokio = { version = "1", features = ["time"] }
+futures-util = "0.3"
 rfd = "0.15"

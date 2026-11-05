@@ -111,6 +111,8 @@ npm run build
 npm audit
 ```
 
-Корневые Cargo default-members — четыре core-crate: эти тесты не требуют WebKit.
+Корневые Cargo default-members — пять core-crate, включая apple-signing: WebKit
+для этих тестов не нужен, но Linux keyring backend требует development-пакет D-Bus.
+Сами unit tests не обращаются к Apple и не используют реальные аккаунты.
 `cargo check -p meganugget-desktop` проверяет нативный host и требует SDK Tauri.
 Web-preview не проверяет Rust IPC и не считается запуском Desktop.

@@ -1,0 +1,19 @@
+[package]
+name = "apple-signing"
+version.workspace = true
+edition = "2024"
+license.workspace = true
+
+[dependencies]
+app-installer = { path = "../app-installer" }
+device-manager = { path = "../device-manager" }
+serde.workspace = true
+serde_json.workspace = true
+plist.workspace = true
+tempfile.workspace = true
+isideload = { git = "https://github.com/nab138/isideload", rev = "326e56229d0727cb6e7b34c8cf03e37e2cd3e17d" }
+tokio = { version = "1", features = ["sync", "time"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+zeroize = "1"
+rootcause = "0.12"
+zip = { version = "2", default-features = false, features = ["deflate"] }

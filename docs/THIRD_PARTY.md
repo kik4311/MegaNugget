@@ -18,6 +18,21 @@
 | ideviceinstaller | внешняя программа установки | https://github.com/libimobiledevice/ideviceinstaller — GPL-2.0 |
 | usbmuxd | внешний системный сервис | https://github.com/libimobiledevice/usbmuxd — GPL / LGPL, см. upstream |
 | XcodeGen | генератор Xcode project | https://github.com/yonaskolb/XcodeGen — MIT |
+| isideload 0.5.2 | Apple auth, provisioning, signing; pinned Git revision | https://github.com/nab138/isideload — MIT; notice в LICENSES/isideload-MIT.txt |
+| apple-codesign-quick 0.1.0 | транзитивный Mach-O signer | https://github.com/Dadoum/apple-crates — LGPL-2.1-or-later; см. LICENSES/LGPL-2.1.txt |
+
+isideload — компонент подписи, **не jailbreak-компонент**. Его использование не означает
+аффилированность или одобрение авторами isideload/iloader. Документация брендинга iloader
+и его ресурсы не копируются. Добавление backend существенно расширяет криптографический
+граф зависимостей; успешные тесты не являются полным аудитом этого графа.
+
+Важно: библиотека apple-codesign-quick **не MIT**. LGPL-текст поставляется отдельно.
+Исходники неизменённой версии: https://crates.io/api/v1/crates/apple-codesign-quick/0.1.0/download
+(точная версия/checksum зафиксированы Cargo.lock). При распространении линкованного
+бинарника необходимо выполнить LGPL-обязательства, включая возможность пересборки/
+перелинковки с изменённой библиотекой; исходники MegaNugget и lock-файл предоставляются
+для пересборки. Не запрещается reverse engineering для отладки таких изменений.
+Это уведомление не заменяет полного лицензионного аудита будущего production-дистрибутива.
 
 Системные WebKitGTK/GTK, WebView2 и Apple frameworks имеют отдельные условия.
 Cargo.lock и package-lock.json фиксируют полный граф зависимостей; таблица выше

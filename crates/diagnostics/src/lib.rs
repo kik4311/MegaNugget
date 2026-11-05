@@ -14,6 +14,11 @@ pub enum Level {
 #[derive(Debug, Clone, Copy, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Event {
+    SigningStarted,
+    SigningCompleted,
+    SigningFailed,
+    SigningCancelled,
+    SignedIpaExported,
     ScanCompleted,
     ScanFailed,
     IpaValidated,

@@ -4,6 +4,8 @@ import {
   escapeHtml as e,
   maskedId,
   preferences,
+  signingActive,
+  type SigningView,
   type Entry,
   type Ipa,
   type Page,
@@ -27,6 +29,14 @@ let logs: Entry[] = [];
 let busy = false;
 let notice = "";
 let level = "all";
+let signingMode = false;
+let signing: SigningView = {
+  status: { phase: "idle", teams: [], error: null },
+  ipa: null,
+};
+let signingTimer: ReturnType<typeof setInterval> | undefined;
+let signingPollRunning = false;
+const signActive = () => signingActive(signing.status.phase);
 const native = isTauri();
 const t = (ru: string, en: string) => (prefs.locale === "ru" ? ru : en);
 const icons: Record<string, string> = {
@@ -99,7 +109,87 @@ function devices(): string {
 }
 function installer(): string {
   const available = !!scan?.installer.Ok;
-  return `<div class="notice-banner">${icon("shield")}<div><strong>Apple Code Signing</strong><p>${t("Требуется корректно подписанный IPA с профилем для вашего устройства. MegaNugget не подписывает приложения и не обходит проверки Apple.", "A valid signed IPA provisioned for your device is required. MegaNugget neither signs apps nor bypasses Apple checks.")}</p></div></div><section class="card panel"><span class="eyebrow">APP INSTALLER</span><h2>${t("Установка, без магии.", "Installation, not magic.")}</h2><div class="steps"><span class="active">01 ${t("Выберите IPA", "Choose IPA")}</span><span class="${ipa ? "active" : ""}">02 ${t("Проверьте условия", "Review prerequisites")}</span><span>03 ${t("Подтвердите установку", "Confirm installation")}</span></div><div class="file-zone">${icon("installer")}<h3>${ipa ? e(ipa.bundle_id) : t("Выберите подписанный IPA-файл", "Select a signed IPA file")}</h3><p>${t("Локальная проверка структуры · файл никуда не отправляется до установки", "Local structure validation · no upload until installation")}</p>${button("choose", t("Выбрать файл", "Choose file"), "installer", !native, true)}</div>${ipa ? `${row("Bundle ID", ipa.bundle_id)}${row(t("Версия сборки", "Build version"), ipa.version)}${row(t("Минимальная iOS", "Minimum iOS"), ipa.minimum_ios)}<p class="warning-text">${t("Файлы подписи найдены. Криптографическая корректность, срок профиля, entitlements и разрешённый UDID локально не проверены — окончательное решение принимает iOS.", "Signing artifacts found. Signature validity, profile expiry, entitlements and allowed UDID are not validated locally; iOS is authoritative.")}</p>` : ""}${deviceSelector()}${row(t("Метод установки", "Installation method"), available ? `ideviceinstaller · ${scan?.installer.Ok}` : t("Недоступен / ещё не проверен", "Unavailable / not checked"))}<div class="install-footer"><span>${t("Установка может заменить приложение с тем же Bundle ID.", "Installation may replace an app with the same bundle ID.")}</span>${button("install", busy ? t("Операция выполняется…", "Operation in progress…") : t("Установить на iPhone", "Install on iPhone"), "installer", !native || !canInstall(scan, current(), ipa, busy))}</div></section><p class="footnote">${t("Процесс показывает реальное ожидание команды, без вымышленного процента. После команды проверяются Bundle ID и версия в списке установленных приложений. Это не подтверждает запуск приложения.", "Progress is indeterminate, not a fabricated percentage. Bundle ID and build version are checked after installation. This does not verify app launch.")}</p>`;
+  const signed = ipa?.signing === "artifacts_present_not_verified";
+  return `<div class="notice-banner">${icon("shield")}<div><strong>Apple Code Signing</strong><p>${t("Готовый подписанный IPA можно установить напрямую. Для нашего неподписанного MegaNugget доступна экспериментальная подпись через Apple Account без заранее созданного сертификата. Обходов защиты нет.", "Install a pre-signed IPA directly, or use experimental Apple Account signing for our unsigned MegaNugget. No pre-existing certificate is needed. No protection bypass.")}</p></div></div>
+    <section class="card panel"><div class="section-heading"><h2>${t("Подпись и установка", "Sign and install")}</h2>${button("scan", t("Проверить USB", "Scan USB"), "refresh", !native || signActive(), true)}</div>
+    <label class="device-select">${t("Режим", "Mode")}<select id="installer-mode" ${busy || signActive() ? "disabled" : ""}><option value="signed" ${!signingMode ? "selected" : ""}>${t("Установить подписанный IPA", "Install signed IPA")}</option><option value="apple" ${signingMode ? "selected" : ""}>${t("Подписать MegaNugget через Apple Account", "Sign MegaNugget with Apple Account")}</option></select></label>
+    <div class="file-zone">${icon("installer")}<h3>${ipa ? e(ipa.bundle_id) : t("Выберите IPA-файл", "Choose an IPA file")}</h3><p>${signingMode ? t("Сейчас поддерживается только собственный org.meganugget.ios без расширений и сторонних frameworks.", "Currently limited to our own org.meganugget.ios without extensions or third-party frameworks.") : t("Локальная проверка структуры IPA.", "Local IPA structure validation.")}</p>${button("choose", t("Выбрать IPA", "Choose IPA"), "installer", !native || signActive(), true)}</div>
+    ${ipa ? `${row("Bundle ID", ipa.bundle_id)}${row(t("Версия сборки", "Build version"), ipa.version)}${row(t("Минимальная iOS", "Minimum iOS"), ipa.minimum_ios)}${row(t("Состояние", "State"), signed ? t("Файлы подписи присутствуют; решение принимает iOS", "Signing artifacts present; iOS decides acceptance") : t("Требуется подпись", "Signing required"))}` : ""}
+    ${deviceSelector()}${signingMode ? signingPanel() : ""}
+    ${row(t("Метод установки", "Installation method"), available ? `ideviceinstaller · ${scan?.installer.Ok}` : t("Недоступен / ещё не проверен", "Unavailable / not checked"))}
+    <div class="install-footer"><span>${t("Подпись не устанавливает приложение автоматически. Установка может заменить приложение с тем же Bundle ID.", "Signing does not install automatically. Installation can replace an app with the same bundle ID.")}</span>${button("install", t("Установить на iPhone", "Install on iPhone"), "installer", !native || !canInstall(scan, current(), ipa, busy || signActive()))}</div>
+    ${signed ? `<div class="export-ipa">${button("save-ipa", t("Сохранить подписанный IPA", "Save signed IPA"), "installer", !native || signActive(), true)}<small>${t("Файл содержит provisioning с идентификаторами устройства. Не публикуйте его.", "Contains device provisioning identifiers. Do not publish it.")}</small></div>` : ""}</section>
+    <p class="footnote">${t("После установки проверяются Bundle ID и версия. Это не подтверждает запуск. Подпись не снижает минимальную версию iOS и не даёт jailbreak.", "Bundle ID and version are checked after installation, not app launch. Signing does not lower minimum iOS or provide a jailbreak.")}</p>`;
+}
+
+function signingPanel(): string {
+  const phase = signing.status.phase;
+  const labels = {
+    idle: t("Ожидание", "Ready"),
+    authenticating: t("Авторизация Apple", "Apple authentication"),
+    two_factor: t(
+      "Введите код 2FA с доверенного устройства",
+      "Enter 2FA code from your trusted device",
+    ),
+    select_team: t("Выберите команду Apple", "Select Apple Team"),
+    provisioning: t("Регистрация устройства", "Registering device"),
+    signing: t("Получение профиля и подпись", "Provisioning and signing"),
+    signed: t(
+      "IPA создан; установка пока не выполнена",
+      "IPA created; not installed yet",
+    ),
+    failed: t("Подпись не подтверждена", "Signing not confirmed"),
+    cancelled: t(
+      "Отменено; изменения аккаунта не откатываются",
+      "Cancelled; account changes are not rolled back",
+    ),
+  };
+  const ready =
+    native &&
+    !!ipa &&
+    phase === "idle" &&
+    !!current()?.device.info &&
+    !current()?.device.failure;
+  const form =
+    phase === "idle"
+      ? `<form id="apple-form" autocomplete="off"><label>Apple Account<input id="apple-email" type="email" autocomplete="off" required maxlength="254" ${!native ? "disabled" : ""}></label><label>${t("Пароль Apple Account", "Apple Account password")}<input id="apple-password" type="password" autocomplete="new-password" required maxlength="1024" ${!native ? "disabled" : ""}></label><label class="consent"><input id="sign-consent" type="checkbox" required ${!native ? "disabled" : ""}><span>${t("Разрешаю сетевую авторизацию и создание сертификата, App ID, группы и профиля у Apple. Согласен на сторонний anisette-сервис https://ani.iloader.app и хранение ключа в системном keyring. Автоматического отзыва сертификатов нет.", "I consent to Apple authentication/account provisioning, third-party anisette at https://ani.iloader.app and private-key storage in the OS keyring. Certificates are never revoked automatically.")}</span></label><button type="submit" class="button" ${!ready || busy ? "disabled" : ""}>${icon("shield")}${t("Подписать через Apple", "Sign with Apple")}</button></form>`
+      : "";
+  const challenge =
+    phase === "two_factor"
+      ? `<form id="two-factor-form" autocomplete="off"><label>${t("Код 2FA (6 цифр)", "2FA code (6 digits)")}<input id="two-factor-code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="off"></label><button type="submit" class="button">${t("Продолжить", "Continue")}</button></form>`
+      : "";
+  const teams =
+    phase === "select_team"
+      ? `<form id="team-form"><label>Apple Team<select id="apple-team">${signing.status.teams.map((team) => `<option value="${e(team.id)}">${e(team.name)} · ${e(team.id)}</option>`).join("")}</select></label><button type="submit" class="button">${t("Выбрать", "Select")}</button></form>`
+      : "";
+  return `<section class="signing-panel"><span class="eyebrow">EXPERIMENTAL · ISIDELOAD BACKEND</span><h3 role="status">${e(labels[phase])}</h3>${signing.status.error ? `<p class="warning-text">${e(signing.status.error)}</p>` : ""}<p>${t("Пароль и код не сохраняются в настройках или журналах. Данные обрабатываются локальным backend и сервисами авторизации. Бесплатная подпись обычно действует 7 дней. Требуется системный keyring; проблемы Apple/2FA могут прервать процесс. Только код с доверенного устройства; выбор SMS пока не реализован.", "Password and code are not saved in settings or logs. Authentication uses the native backend and network services. Free signing typically lasts 7 days. OS keyring required; Apple/2FA failures may interrupt the process. Trusted-device codes only; SMS selection is not implemented.")}</p>${form}${challenge}${teams}${signActive() ? button("cancel-sign", t("Отменить подпись", "Cancel signing"), "arrow", false, true) : ""}${phase === "failed" || phase === "cancelled" ? `<p>${t("Для повторной попытки снова выберите исходный IPA. Ранее созданный сертификат остаётся в аккаунте.", "Select the original IPA again to retry. Any created certificate remains in your account.")}</p>` : ""}</section>`;
+}
+
+async function pollSigning(): Promise<void> {
+  if (!native || signingPollRunning) return;
+  signingPollRunning = true;
+  try {
+    const next = await invoke<SigningView>("signing_status");
+    const changed = JSON.stringify(next) !== JSON.stringify(signing);
+    signing = next;
+    if (next.ipa) ipa = next.ipa;
+    if (!signActive()) {
+      clearInterval(signingTimer);
+      signingTimer = undefined;
+      await refreshLogs();
+    }
+    if (changed && !busy) render();
+  } catch {
+    clearInterval(signingTimer);
+    signingTimer = undefined;
+    notice = t(
+      "Связь со статусом подписи потеряна. Результат неизвестен.",
+      "Signing status connection lost. Result unknown.",
+    );
+    if (!busy) render();
+  } finally {
+    signingPollRunning = false;
+  }
 }
 function journal(): string {
   const entries = logs.filter((x) => level === "all" || x.level === level);
@@ -193,14 +283,20 @@ function bind(): void {
     render();
   });
   on("choose", () => {
-    if (native)
+    if (native && !signActive())
       void action(async () => {
         ipa = null;
-        ipa = await invoke<Ipa | null>("choose_ipa");
+        signing = {
+          status: { phase: "idle", teams: [], error: null },
+          ipa: null,
+        };
+        ipa = await invoke<Ipa | null>("choose_ipa", {
+          forSigning: signingMode,
+        });
       });
   });
   on("install", () => {
-    if (native && canInstall(scan, current(), ipa, busy))
+    if (native && canInstall(scan, current(), ipa, busy || signActive()))
       void action(async () => {
         const result = await invoke<string>("install_ipa", { id: selectedId });
         notice =
@@ -212,6 +308,93 @@ function bind(): void {
             : t("Установка отменена.", "Installation cancelled.");
       });
   });
+  select("installer-mode", (value) => {
+    if (signActive()) return;
+    signingMode = value === "apple";
+    ipa = null;
+    signing = { status: { phase: "idle", teams: [], error: null }, ipa: null };
+    notice = "";
+    render();
+  });
+  document.getElementById("apple-form")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!native || busy || signActive()) return;
+    const emailInput =
+      document.querySelector<HTMLInputElement>("#apple-email")!;
+    const passwordInput =
+      document.querySelector<HTMLInputElement>("#apple-password")!;
+    const consent = document.querySelector<HTMLInputElement>("#sign-consent")!;
+    if (!consent.checked || !ipa) return;
+    const email = emailInput.value;
+    let password = passwordInput.value;
+    emailInput.value = "";
+    passwordInput.value = "";
+    void action(async () => {
+      const pending = invoke<boolean>("begin_signing", {
+        id: selectedId,
+        email,
+        password,
+      });
+      password = "";
+      const started = await pending;
+      if (started) {
+        signing = {
+          status: { phase: "authenticating", teams: [], error: null },
+          ipa: null,
+        };
+        clearInterval(signingTimer);
+        signingTimer = setInterval(() => {
+          void pollSigning();
+        }, 1000);
+      } else {
+        notice = t(
+          "Подпись отменена в системном диалоге.",
+          "Signing cancelled in the native dialog.",
+        );
+      }
+    });
+  });
+  for (const [form, input] of [
+    ["two-factor-form", "two-factor-code"],
+    ["team-form", "apple-team"],
+  ]) {
+    document.getElementById(form)?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (!native || busy) return;
+      const element = document.getElementById(input) as
+        HTMLInputElement | HTMLSelectElement;
+      const value = element.value;
+      element.value = "";
+      void action(async () => {
+        await invoke("signing_respond", { value });
+      });
+    });
+  }
+  on("cancel-sign", () => {
+    if (native && signActive())
+      void action(async () => {
+        await invoke("cancel_signing");
+        await pollSigning();
+      });
+  });
+  on("save-ipa", () => {
+    if (native && !signActive())
+      void action(async () => {
+        const saved = await invoke<boolean>("export_signed_ipa");
+        notice = saved
+          ? t(
+              "IPA сохранён. Не публикуйте provisioning-профиль.",
+              "IPA saved. Do not publish its provisioning profile.",
+            )
+          : t("Сохранение отменено.", "Save cancelled.");
+      });
+  });
+  if (signActive()) {
+    const device = document.getElementById(
+      "device",
+    ) as HTMLSelectElement | null;
+    if (device) device.disabled = true;
+  }
   on("export", () => {
     if (native)
       void action(async () => {

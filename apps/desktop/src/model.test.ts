@@ -4,6 +4,7 @@ import {
   escapeHtml,
   maskedId,
   preferences,
+  signingActive,
   type DeviceView,
   type Scan,
 } from "./model";
@@ -51,6 +52,9 @@ describe("install gating", () => {
   it("requires every prerequisite", () => {
     expect(canInstall(scan, device, ipa, false)).toBe(true);
     expect(canInstall(scan, device, ipa, true)).toBe(false);
+    expect(
+      canInstall(scan, device, { ...ipa, signing: "requires_signing" }, false),
+    ).toBe(false);
     expect(canInstall(scan, device, null, false)).toBe(false);
     expect(canInstall(null, device, ipa, false)).toBe(false);
     expect(
@@ -69,5 +73,31 @@ describe("install gating", () => {
         false,
       ),
     ).toBe(false);
+  });
+});
+
+describe("signing state", () => {
+  it("keeps pending challenges active and terminal states inactive", () => {
+    for (const phase of [
+      "authenticating",
+      "two_factor",
+      "select_team",
+      "provisioning",
+      "signing",
+    ] as const)
+      expect(signingActive(phase)).toBe(true);
+    for (const phase of ["idle", "signed", "failed", "cancelled"] as const)
+      expect(signingActive(phase)).toBe(false);
+  });
+  it("never persists credentials in preferences", () => {
+    const value = preferences(
+      '{"email":"private@example.test","password":"secret","code":"123456"}',
+    );
+    expect(Object.keys(value).sort()).toEqual([
+      "locale",
+      "mask",
+      "scanOnLaunch",
+      "theme",
+    ]);
   });
 });
