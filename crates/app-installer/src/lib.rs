@@ -1,0 +1,358 @@
+use device_manager::{checked, valid_udid, Failure, Runner};
+use serde::{Deserialize, Serialize};
+use std::{
+    collections::HashSet,
+    fs::File,
+    io::{Read, Seek, SeekFrom},
+    path::Path,
+};
+use tempfile::NamedTempFile;
+use zip::ZipArchive;
+
+const MAX_IPA: u64 = 256 * 1024 * 1024;
+const MAX_EXPANDED: u64 = 1024 * 1024 * 1024;
+
+#[derive(Debug, Serialize)]
+pub struct IpaInfo {
+    pub bundle_id: String,
+    pub version: String,
+    pub minimum_ios: String,
+    pub signing: &'static str,
+}
+
+pub struct ValidatedIpa {
+    pub info: IpaInfo,
+    snapshot: NamedTempFile,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum InstallError {
+    InvalidIpa,
+    UnsafeArchive,
+    SizeLimit,
+    MissingSigningArtifacts,
+    Io,
+    InvalidDevice,
+    UnsupportedTool,
+    Tool(Failure),
+    VerificationFailed,
+}
+
+#[derive(Deserialize)]
+struct AppPlist {
+    #[serde(rename = "CFBundleIdentifier")]
+    bundle_id: String,
+    #[serde(rename = "CFBundleVersion")]
+    version: String,
+    #[serde(rename = "CFBundleExecutable")]
+    executable: String,
+    #[serde(rename = "CFBundlePackageType")]
+    package_type: String,
+    #[serde(rename = "MinimumOSVersion")]
+    minimum_ios: String,
+    #[serde(rename = "CFBundleSupportedPlatforms")]
+    platforms: Vec<String>,
+}
+
+/// Snapshot first: the source path cannot be swapped between validation and install.
+/// No archive members are extracted. Signing artifacts are not signature validation.
+pub fn inspect(path: &Path) -> Result<ValidatedIpa, InstallError> {
+    if !path
+        .extension()
+        .is_some_and(|x| x.eq_ignore_ascii_case("ipa"))
+    {
+        return Err(InstallError::InvalidIpa);
+    }
+    let input = File::open(path).map_err(|_| InstallError::Io)?;
+    if !input.metadata().map_err(|_| InstallError::Io)?.is_file() {
+        return Err(InstallError::InvalidIpa);
+    }
+    let mut snapshot = tempfile::Builder::new()
+        .suffix(".ipa")
+        .tempfile()
+        .map_err(|_| InstallError::Io)?;
+    let size =
+        std::io::copy(&mut input.take(MAX_IPA + 1), &mut snapshot).map_err(|_| InstallError::Io)?;
+    if size > MAX_IPA {
+        return Err(InstallError::SizeLimit);
+    }
+    snapshot
+        .seek(SeekFrom::Start(0))
+        .map_err(|_| InstallError::Io)?;
+    let info = validate_archive(snapshot.as_file())?;
+    Ok(ValidatedIpa { info, snapshot })
+}
+
+fn validate_archive(file: &File) -> Result<IpaInfo, InstallError> {
+    let mut zip = ZipArchive::new(file).map_err(|_| InstallError::InvalidIpa)?;
+    if zip.len() > 20_000 {
+        return Err(InstallError::SizeLimit);
+    }
+    let mut names = HashSet::new();
+    let mut roots = HashSet::new();
+    let mut expanded = 0u64;
+    for i in 0..zip.len() {
+        let entry = zip.by_index(i).map_err(|_| InstallError::InvalidIpa)?;
+        let name = entry.name();
+        if entry.enclosed_name().is_none()
+            || name.contains('\\')
+            || name.contains(':')
+            || name.split('/').any(|c| c == ".." || c == ".")
+            || entry.unix_mode().is_some_and(|m| m & 0o170000 == 0o120000)
+            || !names.insert(name.to_owned())
+        {
+            return Err(InstallError::UnsafeArchive);
+        }
+        expanded = expanded
+            .checked_add(entry.size())
+            .ok_or(InstallError::SizeLimit)?;
+        if expanded > MAX_EXPANDED {
+            return Err(InstallError::SizeLimit);
+        }
+        let parts: Vec<_> = name.split('/').collect();
+        if parts.len() >= 3 && parts[0] == "Payload" && parts[1].ends_with(".app") {
+            roots.insert(format!("Payload/{}/", parts[1]));
+        }
+    }
+    if roots.len() != 1 {
+        return Err(InstallError::InvalidIpa);
+    }
+    let root = roots.into_iter().next().ok_or(InstallError::InvalidIpa)?;
+    let plist_bytes = {
+        let mut entry = zip
+            .by_name(&format!("{root}Info.plist"))
+            .map_err(|_| InstallError::InvalidIpa)?;
+        if entry.size() > 1024 * 1024 {
+            return Err(InstallError::SizeLimit);
+        }
+        let mut bytes = vec![];
+        entry
+            .by_ref()
+            .take(1024 * 1024 + 1)
+            .read_to_end(&mut bytes)
+            .map_err(|_| InstallError::InvalidIpa)?;
+        if bytes.len() > 1024 * 1024 {
+            return Err(InstallError::SizeLimit);
+        }
+        bytes
+    };
+    let app: AppPlist = plist::from_bytes(&plist_bytes).map_err(|_| InstallError::InvalidIpa)?;
+    if app.bundle_id.len() > 255
+        || !app.bundle_id.contains('.')
+        || !app
+            .bundle_id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'-'))
+        || app.executable.is_empty()
+        || app.executable.contains(['/', '\\'])
+        || app.executable == "."
+        || app.executable == ".."
+        || app.package_type != "APPL"
+        || !app.platforms.iter().any(|p| p == "iPhoneOS")
+        || app.version.is_empty()
+        || app.version.len() > 100
+        || app.minimum_ios.len() > 32
+    {
+        return Err(InstallError::InvalidIpa);
+    }
+    for name in [
+        &app.executable[..],
+        "_CodeSignature/CodeResources",
+        "embedded.mobileprovision",
+    ] {
+        if !zip
+            .by_name(&format!("{root}{name}"))
+            .is_ok_and(|e| e.size() > 0)
+        {
+            return Err(InstallError::MissingSigningArtifacts);
+        }
+    }
+    Ok(IpaInfo {
+        bundle_id: app.bundle_id,
+        version: app.version,
+        minimum_ios: app.minimum_ios,
+        signing: "artifacts_present_not_verified",
+    })
+}
+
+#[derive(Debug, Clone, Copy, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum InstallerCli {
+    Legacy,
+    Modern,
+}
+
+pub fn installer_cli(runner: &impl Runner) -> Result<InstallerCli, InstallError> {
+    let help = checked(runner, "ideviceinstaller", &["--help"], 10).map_err(InstallError::Tool)?;
+    let help = String::from_utf8_lossy(&help);
+    if help.contains("--install") && help.contains("--list-apps") {
+        Ok(InstallerCli::Legacy)
+    } else if help.contains("install PATH") && help.contains("--xml") {
+        Ok(InstallerCli::Modern)
+    } else {
+        Err(InstallError::UnsupportedTool)
+    }
+}
+
+#[derive(Deserialize)]
+struct InstalledApp {
+    #[serde(rename = "CFBundleIdentifier")]
+    id: String,
+    #[serde(rename = "CFBundleVersion", default)]
+    version: String,
+}
+
+pub fn install(runner: &impl Runner, ipa: &ValidatedIpa, id: &str) -> Result<(), InstallError> {
+    if !valid_udid(id) {
+        return Err(InstallError::InvalidDevice);
+    }
+    device_manager::device_info(runner, id).map_err(InstallError::Tool)?;
+    let cli = installer_cli(runner)?;
+    let path = ipa.snapshot.path().to_str().ok_or(InstallError::Io)?;
+    let args = match cli {
+        InstallerCli::Legacy => vec!["-u", id, "-i", path],
+        InstallerCli::Modern => vec!["-u", id, "install", path],
+    };
+    checked(runner, "ideviceinstaller", &args, 180).map_err(InstallError::Tool)?;
+    let args = match cli {
+        InstallerCli::Legacy => vec!["-u", id, "-l", "-o", "xml"],
+        InstallerCli::Modern => vec!["-u", id, "list", "--xml"],
+    };
+    let bytes = checked(runner, "ideviceinstaller", &args, 30)
+        .map_err(|_| InstallError::VerificationFailed)?;
+    let apps: Vec<InstalledApp> =
+        plist::from_bytes(&bytes).map_err(|_| InstallError::VerificationFailed)?;
+    if apps
+        .iter()
+        .any(|a| a.id == ipa.info.bundle_id && a.version == ipa.info.version)
+    {
+        Ok(())
+    } else {
+        Err(InstallError::VerificationFailed)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    fn fixture(extra: Option<&str>, signed: bool) -> NamedTempFile {
+        let f = tempfile::Builder::new().suffix(".ipa").tempfile().unwrap();
+        let mut zip = zip::ZipWriter::new(f.reopen().unwrap());
+        let options = zip::write::SimpleFileOptions::default();
+        zip.start_file("Payload/MegaNugget.app/Info.plist", options)
+            .unwrap();
+        zip.write_all(br#"<?xml version="1.0"?><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>org.meganugget.ios</string><key>CFBundleVersion</key><string>1</string><key>CFBundleExecutable</key><string>MegaNugget</string><key>MinimumOSVersion</key><string>15.0</string><key>CFBundlePackageType</key><string>APPL</string><key>CFBundleSupportedPlatforms</key><array><string>iPhoneOS</string></array></dict></plist>"#).unwrap();
+        let mut paths = vec!["Payload/MegaNugget.app/MegaNugget"];
+        if signed {
+            paths.extend([
+                "Payload/MegaNugget.app/_CodeSignature/CodeResources",
+                "Payload/MegaNugget.app/embedded.mobileprovision",
+            ]);
+        }
+        if let Some(p) = extra {
+            paths.push(p);
+        }
+        for p in paths {
+            zip.start_file(p, options).unwrap();
+            zip.write_all(b"test-not-real-signature").unwrap();
+        }
+        zip.finish().unwrap();
+        f
+    }
+    #[test]
+    fn artifacts_are_not_trusted_signatures() {
+        let f = fixture(None, true);
+        let ipa = inspect(f.path()).unwrap();
+        assert_eq!(ipa.info.signing, "artifacts_present_not_verified");
+    }
+    #[test]
+    fn unsigned_rejected() {
+        assert!(matches!(
+            inspect(fixture(None, false).path()),
+            Err(InstallError::MissingSigningArtifacts)
+        ));
+    }
+    #[test]
+    fn traversal_rejected() {
+        assert!(matches!(
+            inspect(fixture(Some("../bad"), true).path()),
+            Err(InstallError::UnsafeArchive)
+        ));
+    }
+    #[test]
+    fn multiple_apps_rejected() {
+        assert!(matches!(
+            inspect(fixture(Some("Payload/Other.app/Info.plist"), true).path()),
+            Err(InstallError::InvalidIpa)
+        ));
+    }
+    #[test]
+    fn snapshot_survives_source_change() {
+        let f = fixture(None, true);
+        let ipa = inspect(f.path()).unwrap();
+        std::fs::write(f.path(), b"replaced").unwrap();
+        assert!(validate_archive(ipa.snapshot.as_file()).is_ok());
+    }
+    struct Fake {
+        modern: bool,
+        verify: bool,
+    }
+    impl Runner for Fake {
+        fn run(
+            &self,
+            tool: &str,
+            args: &[&str],
+            _: std::time::Duration,
+        ) -> Result<device_manager::Output, Failure> {
+            let data = if tool == "ideviceinfo" {
+                "<plist version=\"1.0\"><dict><key>ProductType</key><string>iPhone9,1</string><key>ProductVersion</key><string>15.8.8</string><key>BuildVersion</key><string>test</string></dict></plist>"
+            } else if args == ["--help"] {
+                if self.modern {
+                    "install PATH --xml"
+                } else {
+                    "--install --list-apps"
+                }
+            } else if args.contains(&"list") || args.contains(&"-l") {
+                if self.verify {
+                    "<plist version=\"1.0\"><array><dict><key>CFBundleIdentifier</key><string>org.meganugget.ios</string><key>CFBundleVersion</key><string>1</string></dict></array></plist>"
+                } else {
+                    "<plist version=\"1.0\"><array/></plist>"
+                }
+            } else {
+                ""
+            };
+            Ok(device_manager::Output {
+                success: true,
+                stdout: data.as_bytes().to_vec(),
+            })
+        }
+    }
+    #[test]
+    fn both_cli_dialects_verify() {
+        let ipa = inspect(fixture(None, true).path()).unwrap();
+        for modern in [true, false] {
+            assert!(install(
+                &Fake {
+                    modern,
+                    verify: true
+                },
+                &ipa,
+                "0123456789012345678901234567890123456789"
+            )
+            .is_ok());
+            assert!(matches!(
+                install(
+                    &Fake {
+                        modern,
+                        verify: false
+                    },
+                    &ipa,
+                    "0123456789012345678901234567890123456789"
+                ),
+                Err(InstallError::VerificationFailed)
+            ));
+        }
+    }
+}

@@ -1,0 +1,16 @@
+/target/
+/artifacts/
+apps/ios/build/
+**/__pycache__/
+**/node_modules/
+**/dist/
+apps/desktop/src-tauri/gen/
+**/.DS_Store
+**/xcuserdata/
+**/.build/
+apps/ios/*.xcodeproj/
+*.ipa
+*.mobileprovision
+*.p12
+*.cer
+*.log
