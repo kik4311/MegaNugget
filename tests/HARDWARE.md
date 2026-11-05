@@ -7,13 +7,31 @@
 недоступный anisette/keyring, несовместимая iOS (отказ до сети), отмена/таймаут после
 создания аккаунтных ресурсов (не обещать rollback), успешная подпись и отдельная установка.
 
+Для jb-orchestrator (0.2.0) дополнительно — **высокий риск, полный бэкап обязателен**:
+
+| Сценарий | Ожидаемый результат |
+|---|---|
+| Определение плана для реального iPhone9,1/9,3 + 15.8.8 | Dopamine ≥ 2.5b4, DarkSword, trollstore + предупреждение bootloops |
+| Нет сети при fetch релиза | честный transfer_failed, не «готово» |
+| GitHub недоступен / 4xx | error, не подмена артефакта |
+| SHA-256 re-run смещён | size/digest mismatch → ошибка, артефакт не используется |
+| Другой тег (stable 3.x) | точный match тега, prerelease не поднимается под видом stable |
+| `.tipa` вместо `.ipa` | не выбирается как app artifact |
+| TrollStore/TrollRestore на iPhone 7/15.8.8 | только вручную по upstream; описывание результата документацией upstream |
+| Dopamine 2.5b4 jailbreak (после бэкапа) | фиксировать результат/сбои/bootloops; при bootloop — DFU restore как описана upstream |
+| Удаление jailbreak | опция Remove Jailbreak; проверить функциональность устройства после |
+
+Pубличные отчёты о bootloops на iPhone 7/15.8.8 — причина ставить пункт
+«Dopamine 2.5b4 jailbreak» только после полного подтверждённого бэкапа и понимания,
+что восстановление может быть DFU-restore (потеря данных с последнего бэкапа).
+
 | Сценарий | Ожидаемый результат |
 |---|---|
 | Нет iPhone, usbmuxd доступен | devices=[], ошибки нет |
 | Нет CLI | tool_missing; установка disabled |
 | usbmuxd недоступен | command_failed, не «устройств нет» |
 | iPhone подключён/locked/untrusted | неизвестный доступ либо данные; не утверждать причину отказа |
-| iPhone9,1 / 9,3 + точная 15.8.8 | research_target, jailbreak=false |
+| iPhone9,1 / 9,3 + точная 15.8.8 | research_target, jb_plan=Dopamine 2.5b4/DarkSword |
 | Другой build/version/model | не расширять поддержку без доказательств |
 | Два iPhone | явный выбор; проверка и установка на выбранный UDID |
 | Отмена file picker | IPA сброшен, установки нет |

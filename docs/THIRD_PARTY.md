@@ -18,6 +18,8 @@
 | ideviceinstaller | внешняя программа установки | https://github.com/libimobiledevice/ideviceinstaller — GPL-2.0 |
 | usbmuxd | внешний системный сервис | https://github.com/libimobiledevice/usbmuxd — GPL / LGPL, см. upstream |
 | XcodeGen | генератор Xcode project | https://github.com/yonaskolb/XcodeGen — MIT |
+| Dopamine 2.5b4 | официальный upstream jailbreak-компонент | https://github.com/opa334/Dopamine — GPL-3.0; входит в MegaNugget **только как проверенный загрузочный артефакт**, не как код |
+| TrollStore 2.x / TrollRestore | канал установки на устройстве | https://github.com/opa334/TrollStore, https://github.com/JJTech0130/TrollRestore — лицензии upstream |
 | isideload 0.5.2 | Apple auth, provisioning, signing; pinned Git revision | https://github.com/nab138/isideload — MIT; notice в LICENSES/isideload-MIT.txt |
 | apple-codesign-quick 0.1.0 | транзитивный Mach-O signer | https://github.com/Dadoum/apple-crates — LGPL-2.1-or-later; см. LICENSES/LGPL-2.1.txt |
 
@@ -25,6 +27,11 @@ isideload — компонент подписи, **не jailbreak-компоне
 аффилированность или одобрение авторами isideload/iloader. Документация брендинга iloader
 и его ресурсы не копируются. Добавление backend существенно расширяет криптографический
 граф зависимостей; успешные тесты не являются полным аудитом этого графа.
+
+Dopamine/TrollStore используются как внешние артефакты (не vendored-code), проверяемые
+по SHA-256 перед использованием пользователем; GPL-3.0 не «заражает» MegaNugget, потому
+что мы не изменяем и не линкуем их исходники. Практика: любая правка этих проектов
+остаётся в их репозиториях; отчёты о проблемах отправляются upstream.
 
 Важно: библиотека apple-codesign-quick **не MIT**. LGPL-текст поставляется отдельно.
 Исходники неизменённой версии: https://crates.io/api/v1/crates/apple-codesign-quick/0.1.0/download
