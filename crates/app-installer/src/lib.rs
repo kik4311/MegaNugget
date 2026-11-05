@@ -102,7 +102,7 @@ pub fn inspect_for_signing(path: &Path) -> Result<SigningInput, InstallError> {
         .file_names()
         .any(|n| n.contains("/Frameworks/") || n.contains("/PlugIns/") || n.ends_with(".dylib"))
     {
-        return Err(InstallError::UnsupportedSigningBundle);
+        return Err(InstallError::SigningContentUnsupported);
     }
     Ok(SigningInput { info, snapshot })
 }
@@ -115,11 +115,31 @@ pub enum InstallError {
     SizeLimit,
     MissingSigningArtifacts,
     UnsupportedSigningBundle,
+    SigningContentUnsupported,
     Io,
     InvalidDevice,
     UnsupportedTool,
     Tool(Failure),
     VerificationFailed,
+}
+
+impl InstallError {
+    /// Stable snake_case codes for the UI; the frontend maps them to localized hints.
+    pub const fn code(&self) -> &'static str {
+        match self {
+            Self::InvalidIpa => "invalid_ipa",
+            Self::UnsafeArchive => "unsafe_archive",
+            Self::SizeLimit => "size_limit",
+            Self::MissingSigningArtifacts => "missing_signing_artifacts",
+            Self::UnsupportedSigningBundle => "unsupported_signing_bundle",
+            Self::SigningContentUnsupported => "signing_content_unsupported",
+            Self::Io => "io",
+            Self::InvalidDevice => "invalid_device",
+            Self::UnsupportedTool => "unsupported_tool",
+            Self::Tool(_) => "tool_failure",
+            Self::VerificationFailed => "verification_failed",
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -397,6 +417,36 @@ mod tests {
             let file = fixture(Some(extra), false);
             assert!(inspect_for_signing(file.path()).is_err());
         }
+        assert!(matches!(
+            inspect_for_signing(
+                fixture(
+                    Some("Payload/MegaNugget.app/Frameworks/X.framework/b"),
+                    false
+                )
+                .path()
+            ),
+            Err(InstallError::SigningContentUnsupported)
+        ));
+    }
+
+    #[test]
+    fn error_codes_are_stable_snake_case() {
+        assert_eq!(
+            InstallError::UnsupportedSigningBundle.code(),
+            "unsupported_signing_bundle"
+        );
+        assert_eq!(
+            InstallError::SigningContentUnsupported.code(),
+            "signing_content_unsupported"
+        );
+        assert_eq!(
+            InstallError::MissingSigningArtifacts.code(),
+            "missing_signing_artifacts"
+        );
+        assert_eq!(
+            InstallError::Tool(Failure::CommandFailed).code(),
+            "tool_failure"
+        );
     }
 
     #[test]

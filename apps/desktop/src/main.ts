@@ -39,6 +39,28 @@ let signingPollRunning = false;
 const signActive = () => signingActive(signing.status.phase);
 const native = isTauri();
 const t = (ru: string, en: string) => (prefs.locale === "ru" ? ru : en);
+const errorHints: Record<string, [string, string]> = {
+  unsupported_signing_bundle: [
+    "Выбран посторонний IPA. Для подписи подходит только неподписанный MegaNugget (org.meganugget.ios) — например, MegaNugget-UNSIGNED.ipa из Загрузок. Сторонние приложения вроде GoldenNugget подписать нельзя.",
+    "That IPA is not ours. Apple signing accepts only the unsigned MegaNugget (org.meganugget.ios), e.g. MegaNugget-UNSIGNED.ipa from Downloads. Third-party apps like GoldenNugget cannot be signed.",
+  ],
+  signing_content_unsupported: [
+    "Подпись для IPA с Frameworks/PlugIns/dylib пока не реализована.",
+    "Signing IPAs that contain Frameworks/PlugIns/dylibs is not implemented yet.",
+  ],
+  missing_signing_artifacts: [
+    "Для прямой установки нужен подписанный IPA или режим Apple-подписи.",
+    "Direct installation requires a signed IPA or the Apple signing mode.",
+  ],
+  minimum_ios_not_met: [
+    "iOS на устройстве ниже минимальной версии выбранного IPA.",
+    "The device iOS is older than the IPA requires.",
+  ],
+};
+function describeError(raw: string): string {
+  const [ru, en] = errorHints[raw] ?? [raw, raw];
+  return t(ru, en);
+}
 const icons: Record<string, string> = {
   home: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1z"/>',
   devices:
@@ -216,7 +238,9 @@ async function action(work: () => Promise<void>): Promise<void> {
   try {
     await work();
   } catch (error) {
-    notice = `${t("Операция не подтверждена", "Operation not confirmed")}: ${String(error)}`;
+    notice = `${t("Операция не подтверждена", "Operation not confirmed")}: ${describeError(
+      String(error),
+    )}`;
   } finally {
     try {
       await refreshLogs();

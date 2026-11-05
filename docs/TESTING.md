@@ -86,8 +86,11 @@ commit `a0796a531d8e08995722511ccd40d8e904ca30d1`:
 
 - Linux: обновлённый host прошёл `cargo check`, Clippy с `-D warnings`, release build
   через Tauri и runtime smoke (5 секунд, stdout/stderr без ошибок).
-- Rust: **23 unit tests passed**, включая передачу/отмену 2FA challenge, gate версии iOS,
+- Rust: **24 unit tests passed**, включая передачу/отмену 2FA challenge, gate версии iOS,
   запрет прямой установки unsigned IPA, безопасное извлечение и запрет frameworks/PlugIns.
+- Ошибки IPC выбора/установки IPA переведены на стабильные snake_case-коды
+  (`unsupported_signing_bundle`, `signing_content_unsupported` и др.), которые фронтенд
+  переводит в понятные RU/EN-подсказки; Debug-имена вариантов больше не показываются.
 - TypeScript: **6 tests passed**, включая запрет установки до подписи, состояния операции
   и отсутствие credential-полей в сериализуемых настройках. TypeScript/Vite build успешен.
 - Web-preview: новая форма видна, без native backend её поля/подпись заблокированы;

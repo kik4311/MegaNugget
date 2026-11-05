@@ -118,7 +118,7 @@ async fn choose_ipa(
                 }
                 Err(error) => {
                     inner.journal.record(Level::Warning, Event::IpaRejected);
-                    Err(format!("{error:?}"))
+                    Err(error.code().to_string())
                 }
             };
         }
@@ -131,7 +131,7 @@ async fn choose_ipa(
             }
             Err(error) => {
                 inner.journal.record(Level::Warning, Event::IpaRejected);
-                Err(format!("{error:?}"))
+                Err(error.code().to_string())
             }
         }
     })
@@ -161,7 +161,7 @@ async fn install_ipa(id: String, state: State<'_, Shared>) -> Result<String, Str
             }
             Err(error) => {
                 inner.journal.record(Level::Error, Event::InstallFailed);
-                Err(format!("{error:?}; device_state_unknown"))
+                Err(format!("{}; device_state_unknown", error.code()))
             }
         }
     }).await.map_err(|_| "worker_failed".to_string())?
