@@ -1,0 +1,5 @@
+# Keep text identical across Linux, macOS and Windows checkouts (including Prettier).
+* text=auto eol=lf
+*.png -text
+*.ico -text
+*.icns -text

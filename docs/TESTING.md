@@ -58,3 +58,23 @@ Vite/Vitest, повторный audit вернул 0. Это не полный s
 - Jailbreak, rootless-bootstrap, kernel privileges и recovery restore: не реализованы.
 
 Ручная матрица следующего этапа: [../tests/HARDWARE.md](../tests/HARDWARE.md).
+
+## Дополнение: первый завершённый GitHub CI
+
+Run https://github.com/kik4311/MegaNugget/actions/runs/42080206506,
+commit `a0796a531d8e08995722511ccd40d8e904ca30d1`:
+
+- iOS: Swift tests, SwiftUI simulator build, Release ARM64 device build и выгрузка
+  **неподписанного** IPA прошли. Это заменяет прежний статус «Xcode не проверен»
+  для данного коммита, но не доказывает установку/запуск на физическом iPhone.
+- Desktop: Linux x86_64, macOS ARM и macOS Intel native builds прошли.
+- Windows: Rust и TypeScript tests прошли; проверка Prettier остановила job из-за
+  переводов строк при Windows checkout. Компиляция Windows host в этом запуске
+  не выполнялась. Добавлен `.gitattributes` с LF для text-файлов; нужен новый CI.
+- 6 новых Python-тестов упаковщика прошли локально и в iOS job. `lipo` в unit tests
+  подменяется; реальная архитектура проверяется отдельно скриптом в CI.
+- Артефакт `MegaNugget-unsigned-device` содержит `MegaNugget-UNSIGNED.ipa`, manifest
+  и предупреждение. Provisioning/сертификатов нет; установка на обычную iOS недоступна.
+
+Предыдущий запуск `42080021825` отменён после исправления Xcode language mode;
+его отметки отмены не используются как доказательство ошибок тестов.
