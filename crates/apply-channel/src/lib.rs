@@ -155,6 +155,7 @@ pub struct Inspection {
     #[serde(flatten)]
     pub snapshot: BackupSnapshot,
     pub layout: &'static str,
+    pub bucket_dirs: usize,
     pub domain_files: usize,
     pub domain_dirs: usize,
     pub entries: usize,
@@ -247,11 +248,24 @@ fn status(dir: &Path) -> Result<(String, Option<bool>), Error> {
 /// Read Info.plist, extracting only whitelisted fields. Serial number,
 /// IMEI, phone number and device name present in that file are parsed and
 /// immediately dropped, never stored or printed.
+///
+/// Apple/libimobiledevice Info.plist spells these keys with spaces
+/// ("Product Type"); older tooling uses camelCase — both accepted.
 fn identity(dir: &Path) -> Result<(String, String), Error> {
     let dict = plist_dictionary(&dir.join("Info.plist"))?;
-    let product = string(&dict, "ProductType")?.to_string();
-    let ios = string(&dict, "ProductVersion")?.to_string();
+    let product = first_string(&dict, ["ProductType", "Product Type"])?.to_string();
+    let ios = first_string(&dict, ["ProductVersion", "Product Version"])?.to_string();
     Ok((product, ios))
+}
+
+fn first_string<'a>(
+    dict: &'a plist::Dictionary,
+    keys: impl AsRef<[&'a str]>,
+) -> Result<&'a str, Error> {
+    keys.as_ref()
+        .iter()
+        .find_map(|key| dict.get(key).and_then(Value::as_string))
+        .ok_or(Error::BackupLayoutUnsupported)
 }
 
 /// Verify a local backup directory: UDID-named directory exists,
@@ -303,17 +317,22 @@ pub fn inspect_backup(dir: &Path) -> Result<Inspection, Error> {
         None => return Err(Error::BackupLayoutUnsupported),
     };
     let entries = std::fs::read_dir(&device_dir).map_err(|_| Error::BackupLayoutUnsupported)?;
+    let mut bucket_dirs = 0;
     let mut domain_files = 0;
     let mut domain_dirs = 0;
     let mut total = 0;
     for entry in entries.flatten() {
         total += 1;
         let name = entry.file_name().to_string_lossy().into_owned();
-        let is_domain = name.contains("Domain-");
-        if !is_domain {
+        let is_dir = entry.file_type().map(|t| t.is_dir()).unwrap_or(false);
+        if name.len() == 2 && name.bytes().all(|byte| byte.is_ascii_hexdigit()) && is_dir {
+            bucket_dirs += 1;
             continue;
         }
-        if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+        if !name.contains("Domain-") {
+            continue;
+        }
+        if is_dir {
             domain_dirs += 1;
         } else {
             domain_files += 1;
@@ -329,6 +348,7 @@ pub fn inspect_backup(dir: &Path) -> Result<Inspection, Error> {
             is_full_backup: full,
         },
         layout,
+        bucket_dirs,
         domain_files,
         domain_dirs,
         entries: total,
@@ -407,7 +427,7 @@ pub(crate) mod tests {
         .unwrap();
         std::fs::write(
             dir.join("Info.plist"),
-            "<plist version=\"1.0\"><dict><key>ProductType</key><string>iPhone9,3</string><key>ProductVersion</key><string>15.8.8</string><key>SerialNumber</key><string>F17TOPSECRET</string></dict></plist>",
+            "<plist version=\"1.0\"><dict><key>Product Type</key><string>iPhone9,3</string><key>Product Version</key><string>15.8.8</string><key>Serial Number</key><string>F17TOPSECRET</string></dict></plist>",
         )
         .unwrap();
         std::fs::write(dir.join("Manifest.mbdb"), [0u8; 4]).unwrap();
@@ -578,6 +598,7 @@ pub(crate) mod tests {
         let temp = writable("finished");
         let inspection = inspect_backup(temp.path()).unwrap();
         assert_eq!(inspection.layout, "manifest_mbdb");
+        assert_eq!(inspection.bucket_dirs, 0);
         assert_eq!(inspection.domain_files, 1);
         assert_eq!(inspection.domain_dirs, 0);
         assert!(inspection.entries >= 2);
@@ -597,8 +618,11 @@ pub(crate) mod tests {
         )
         .unwrap();
         std::fs::write(dir.join("Manifest.db"), b"SQLite format 3").unwrap();
+        std::fs::create_dir(sqlite.path().join(UDID).join("00")).unwrap();
+        std::fs::create_dir(sqlite.path().join(UDID).join("ff")).unwrap();
         let inspected = inspect_backup(sqlite.path()).unwrap();
         assert_eq!(inspected.layout, "manifest_sqlite");
+        assert_eq!(inspected.bucket_dirs, 2);
 
         let bare = tempfile::tempdir().unwrap();
         let dir = bare.path().join(UDID);

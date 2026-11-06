@@ -42,8 +42,8 @@
 
 | Этап | Содержимое | Статус |
 |---|---|---|
-| 1 | Read-only: `detect`, `inspect`, `verify`, защитный `backup` (с consent) | реализовано (CLI `crates/apply-channel`, тесты + live `detect`) |
-| 2 | `plan`: слияние draft ↔ backup (bplist diff, checksum Manifest) | после первой реальной backup |
+| 1 | Read-only: `detect`, `inspect`, `verify`, защитный `backup` (с consent) | реализовано; **реальный backup выполнен** (SnapshotState finished, 3,9 ГБ) |
+| 2 | `plan`: слияние draft ↔ backup (bplist diff, checksum Manifest) | **макет уже известен**: Manifest.db (SQLite) + Manifest.plist + 256 hash-бакетов |
 | 3 | Собственно apply (restore) + per-key чтение эффекта + rollback | не начат |
 | 4 | Desktop UI + журнал-события (`backup_started`…) | не начат |
 
@@ -78,6 +78,28 @@ Restore-команды в прототипе **нет и не будет**, по
 - Не пишет в backup, не изменяет Manifest, не сжимает/не распаковывает файлы.
 - Не производит «предварительный» restore доменов, не «тестирует» запись.
 - Не хранит UDID и серийные номера в файлах отчётов; в stdout — только белый список.
+
+## Реальный backup (2026-11-06, первый консент-гейтованный прогон)
+
+Одна команда: `apply-channel backup <home>/.local/share/meganugget/backups/2026-11-06-iphone7-first --consent-backup`.
+
+- Время ~0–10 минут, объём **3,9 ГБ**, SnapshotState **finished**; IsFullBackup
+  зафиксирован `false` (протокол idevicebackup2 1.3.0 первого прохода; состав
+  проверяется на этапе 2 по содержимому Manifest.db, домены и их счётчики уже
+  там).
+- Макет подтверждён `inspect`: **manifest_sqlite** — `Manifest.db` (SQLite,
+  ~27 МБ), `Manifest.plist`, `Info.plist`, `Status.plist` и подкаталоги-бакеты
+  `00…ff` (256 шт., по одному на префикс хеша файла).
+- Первая версия verify/inspect отказала с `backup_layout_unsupported`: ключи
+  Info.plist в backup записаны как «Product Type»/«Product Version» с пробелами
+  (формат Apple/libimobiledevice), а код искал `ProductType`. Исправлено:
+  принимаются оба варианта; тесты обновлены.
+- Вывод CLI — только белые списки: `{"udid_masked":"cb01…7637",
+  "product":"iPhone9,3","ios":"15.8.8","snapshot_state":"finished",
+  "is_full_backup":false,"layout":"manifest_sqlite","bucket_dirs":256,
+  "domain_files":0,"domain_dirs":0,"entries":260}`.
+- Ничего не удалено, ничего не записано в устройство; restore-команд по-прежнему
+  нет.
 
 ## Критерий успеха этапа 1
 

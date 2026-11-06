@@ -231,7 +231,7 @@ ios job) и run `42250519670` (Desktop-черновики, все 5 jobs вкл.
 | CLI `--help` / `backup <dir>` (без флага) | usage; `error: backup_requires_consent`, exit 1 — процесс не запускается |
 | CLI `verify /tmp` | `error: backup_layout_unsupported`, exit 1 |
 | CLI `detect` на подключённом iPhone 7 | JSON: iPhone9,3 · iOS 15.8.8 · `matches_target: true`, UDID замаскирован (`cb01…7637`), failures пуст |
-| Реальный `backup` | **не выполнялся в этой сессии** — только по явному согласию пользователя (объём диска, время) |
+| Реальный `backup` | **выполнен** (консент-гейтованный): ~10 мин, 3,9 ГБ, SnapshotState finished; `verify`/`inspect` на живом каталоге — ок; макет `manifest_sqlite`, 256 бакетов; причёсан отказ из-за ключей «Product Type» (пробел) в Info.plist |
 
 Вывод команд — UTF-8 JSON из белых списков (ProductType, ProductVersion,
 SnapshotState, layout); в либу читаются Info.plist/Status.plist, но серийные
