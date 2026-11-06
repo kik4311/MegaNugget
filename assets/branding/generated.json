@@ -1,0 +1,30 @@
+{
+  "source": "assets/branding/meganugget-logo.svg",
+  "source_sha256": "e97e637abb386a7fb26356de1332cbb4174094e667d50bf14aa03eafd134fb06",
+  "outputs": {
+    "apps/desktop/public/branding/meganugget-logo.svg": "e97e637abb386a7fb26356de1332cbb4174094e667d50bf14aa03eafd134fb06",
+    "apps/desktop/src-tauri/icons/source.svg": "e97e637abb386a7fb26356de1332cbb4174094e667d50bf14aa03eafd134fb06",
+    "apps/desktop/src-tauri/icons/32x32.png": "6f15a10582f14d647d74b780b90b2d1caebb902259d8b223cc081f99dffbabee",
+    "apps/desktop/src-tauri/icons/128x128.png": "33a99b37d565540a477ff1a3be7639914a7664fea73d6064eb0878355131ae11",
+    "apps/desktop/src-tauri/icons/128x128@2x.png": "8adb48181734911d69c0a4a0986f8a42994daaf8d94386e2197b2e8dbde3411e",
+    "apps/desktop/src-tauri/icons/icon.png": "6fee329ad73ab07bbb3b262b793b46b359cf358ec549044633ab129f2d6ff7c3",
+    "apps/desktop/src-tauri/icons/icon.ico": "b06e39c5f835637119a6914a8f33a914885ea910287308077df51f558eafaa24",
+    "apps/desktop/src-tauri/icons/icon.icns": "82606d89204689ae12d7b4a2b99406a59c245df6d69c820f16d3c868d585b64e",
+    "apps/desktop/public/branding/favicon.ico": "cd0f0a7c221b883e1e76b11fd36875f411da0fe7798d490775925f3dc0219b94",
+    "apps/desktop/public/branding/apple-touch-icon.png": "c2b9e6143ab2d6dbaf125f77db422b1fc948550aa90ed5ffd3c218c967e40229",
+    "apps/ios/Sources/App/Assets.xcassets/AppIcon.appiconset/AppIcon-20@2x.png": "34ac3d4e67d2a872562d431b723648538d155a7672db7777a82d6c62c9e57aa3",
+    "apps/ios/Sources/App/Assets.xcassets/AppIcon.appiconset/AppIcon-20@3x.png": "1dfe1075bd23306c74a18f3f09cb6dea888cca0f743b65f676d62d77ed0a0db8",
+    "apps/ios/Sources/App/Assets.xcassets/AppIcon.appiconset/AppIcon-29@2x.png": "5694d069a855cdf9cfe57ba3d41f008513976eda8dc2c76d36ca3af737d8242f",
+    "apps/ios/Sources/App/Assets.xcassets/AppIcon.appiconset/AppIcon-29@3x.png": "106bc94548fc2a8778f51d0ae14607ef465bff4d5de01f428cc5199a36fd8d20",
+    "apps/ios/Sources/App/Assets.xcassets/AppIcon.appiconset/AppIcon-40@2x.png": "15a63caa018dc5db5546050a3f7d7184e9364d0ed8d69e6ae5ea769224837e20",
+    "apps/ios/Sources/App/Assets.xcassets/AppIcon.appiconset/AppIcon-40@3x.png": "84d19040103de09b1663b1a89aaafd707f3acf4473b4fb32c1c81707460aa6c1",
+    "apps/ios/Sources/App/Assets.xcassets/AppIcon.appiconset/AppIcon-60@2x.png": "84d19040103de09b1663b1a89aaafd707f3acf4473b4fb32c1c81707460aa6c1",
+    "apps/ios/Sources/App/Assets.xcassets/AppIcon.appiconset/AppIcon-60@3x.png": "c2b9e6143ab2d6dbaf125f77db422b1fc948550aa90ed5ffd3c218c967e40229",
+    "apps/ios/Sources/App/Assets.xcassets/AppIcon.appiconset/AppIcon.png": "3bd15a8725b4dd2cdf1848b0ed9e8ee44cd08573ac14a5652de35f42829fecb0",
+    "apps/ios/Sources/App/Assets.xcassets/AppIcon.appiconset/Contents.json": "58d3154b6923b5786c8f078b4a3f3cc5d7ebce5b3a42443a72977fe37de298f4",
+    "apps/ios/Sources/App/Assets.xcassets/AppLogo.imageset/AppLogo@1x.png": "4169ae6f027e143382917aba0da46135ae5a9f1421aad480aa710f5e144d3d5d",
+    "apps/ios/Sources/App/Assets.xcassets/AppLogo.imageset/AppLogo@2x.png": "33a99b37d565540a477ff1a3be7639914a7664fea73d6064eb0878355131ae11",
+    "apps/ios/Sources/App/Assets.xcassets/AppLogo.imageset/AppLogo@3x.png": "c658c966bcf1d91192f9e374c937825cbef4e3b8b9474285ab89e58a9672b74f",
+    "apps/ios/Sources/App/Assets.xcassets/AppLogo.imageset/Contents.json": "73aa33dd5af1f494caf26ef11862f227e5dbee2dae9a2b17d8749121cfe99626"
+  }
+}

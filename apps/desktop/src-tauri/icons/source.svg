@@ -1,5 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#17131f"/>
-  <rect x="36" y="36" width="440" height="440" rx="88" fill="#b69cfa"/>
-  <path d="M116 356V156h58l82 98 82-98h58v200h-62V245l-78 90-78-90v111z" fill="#261d36"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none" role="img" aria-labelledby="title description">
+  <title id="title">MegaNugget</title>
+  <desc id="description">Rounded violet M with a small golden nugget accent on a charcoal app icon.</desc>
+  <rect width="512" height="512" rx="112" fill="#111017"/>
+  <path d="M120 353L150 160Q153 140 174 140H191Q205 140 212 152L256 226L300 152Q307 140 321 140H338Q359 140 362 160L392 353Q395 373 375 373H330Q314 373 312 357L297 258L274 299Q256 330 238 299L215 258L200 357Q198 373 182 373H137Q117 373 120 353Z" fill="#A78BFA"/>
+  <path d="M174 140H191Q205 140 212 152L256 226L238 299L215 258L200 357Q198 373 182 373H137Q117 373 120 353L150 160Q153 140 174 140Z" fill="#8B5CF6"/>
+  <path d="M346 92L364 86Q377 82 383 95L389 111Q394 124 381 130L364 137Q351 142 346 129L339 112Q334 98 346 92Z" fill="#F3C76A"/>
 </svg>

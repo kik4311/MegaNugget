@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/branding/meganugget-logo.svg" width="96" height="96" alt="MegaNugget logo"></p>
+
 # MegaNugget
 
 **Кастомизация старых iOS без jailbreak**: SwiftUI-клиент и Tauri Desktop

@@ -20,6 +20,10 @@ struct ContentView: View {
             NavigationView {
                 List {
                     Section {
+                        Image("AppLogo")
+                            .resizable().interpolation(.high).scaledToFit()
+                            .frame(width: 64, height: 64)
+                            .accessibilityHidden(true)
                         Text("Кастомизация для iOS 15").font(.title2.bold())
                         Text("MegaNugget · Legacy. Без jailbreak. Первый этап — iPhone 7 / iOS 15.8.8.")
                             .foregroundColor(.secondary)
@@ -58,6 +62,11 @@ struct ContentView: View {
                         Text("Выбранная тема хранится локально. С этого экрана не выполняются сетевые запросы, pairing или резервное копирование.")
                     }
                     Section(header: Text("О проекте")) {
+                        HStack(spacing: 12) {
+                            Image("AppLogo").resizable().scaledToFit()
+                                .frame(width: 48, height: 48).accessibilityHidden(true)
+                            Text("MegaNugget").font(.headline)
+                        }
                         Text("MegaNugget · AGPL-3.0. Собственный интерфейс для старых iOS; не официальный клиент GoldenNugget.")
                         Link("GoldenNugget Mobile · авторы и исходники", destination: URL(string: "https://github.com/GoldenNugget-Team/GoldenNugget-mobile")!)
                         Link("Исходники MegaNugget", destination: URL(string: "https://github.com/kik4311/MegaNugget")!)
