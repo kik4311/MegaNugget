@@ -35,6 +35,39 @@ python3 scripts/import_goldennugget_core.py /path/to/GoldenNugget-mobile
 - Новый адаптер `LegacyTweakPort` и вкладка «Твики»: поиск, причины блокировки,
   редактор Bool/Int/Double/String и **локальный XML-черновик**.
 
+## Rust-порт для Desktop (`crates/customization`)
+
+Та же модель и компилятор, что и в Swift-адаптере, в host-крейте для Desktop:
+
+- `catalog.json` — **снепшот 258 закреплённых upstream-спецификаций**, сгенерированный
+  `scripts/export_desktop_catalog.py` из импортированного `TweakCatalog.swift`
+  (репозиторий, ревизия и SHA-256 исходника внутри файла). Проверка свежести:
+  `scripts/export_desktop_catalog.py --check`, запускается в Python-тестах.
+- Строгие версии (1–3 ASCII-числа), пять таблиц моделей/OS, capability-гейты
+  и те же статусы от `DraftCandidate` до `MechanismNotPorted`. `deviceStatus`
+  из Swift портирован дословно; неверные данные устройства отвергаются.
+- Компилятор (`compiler.rs`) повторяет правила Swift-порта: только явно выбранные
+  спецификации; отдельные plist-предложения без слияния с устройством; offValue /
+  reversible / wholeDict-ветки; путь в backup-домен по 8 правилам; зеркало
+  `.GlobalPreferences` в HomeDomain; пустые словари и непокрытые пути отвергают
+  весь черновик (`EMPTY`/`not mapped` не тихо отбрасываются).
+- Экономика черновиков: ≤ 64 пунктов, текст ≤ 1024 байта UTF-8 без NUL,
+  конфликты RTL/LTR, exclusiveWith/requires, валидация OptionalBundle, типы int/double
+  из реестра без приведения.
+- IPC Desktop (`apps/desktop/src-tauri/src/drafts.rs`): `tweaks_catalog` и
+  `tweaks_preview`. Ошибки — стабильные snake_case-коды (`tweaks_empty_selection`,
+  `tweaks_too_many_selections`, `tweaks_unknown_tweak`, `tweaks_blocked_tweak`,
+  `tweaks_invalid_value`, `tweaks_conflict`, `tweaks_compile_failed`); RU/EN-тексты
+  живут на клиенте. Успешная компиляция пишет событие `DraftCompiled` в журнал.
+- Страница «Твики · черновики» на Desktop: цель (модель/версия iOS или подключённое
+  устройство), карточки статусов, поиск/фильтр «только кандидаты», inline-редактор,
+  список черновика и XML-предпросмотр. `applied_to_device` всегда `false` — и в типе,
+  и в тестах, и в UI-формулировках. При смене цели каталог перезагружается, а пункты,
+  переставшие быть кандидатами, удаляются из черновика, а не блокируют компиляцию
+  поздним отказом.
+- Тесты Rust зеркалят Swift `LegacyTweakPortTests` (3 unit + 9 integration), так что
+  host и iOS-адаптер остаются поведенчески одинаковыми.
+
 У 223 записей минимальная версия — 17.4/26/27; у 33 нижняя граница не указана.
 **`nil` в minVersion не означает поддержку iOS 15.** После дополнительных
 ограничений число кандидатов может быть меньше; это не количество рабочих твиков.
@@ -86,5 +119,9 @@ XML в предпросмотре — **новый словарь предлож
 новые API, типы/экранирование plist, слияние только выбранных ключей, конфликты,
 числовые/текстовые ограничения, отсутствие реального применения и посторонних defaults.
 Они должны выполняться в macOS CI вместе со сборкой SwiftUI. Python-тесты проверяют
-происхождение и целостность импортированных файлов, но не заменяют компиляцию Swift.
-Аппаратная валидация iOS 15–17 не выполнена.
+происхождение и целостность импортированных файлов, включая свежесть
+`crates/customization/catalog.json`, но не заменяют компиляцию Swift.
+Rust-порт проверен локально: `cargo fmt --all --check`, `cargo clippy --workspace
+--all-targets -- -D warnings`, `cargo test --workspace` — без ошибок (12 тестов крейта
+`customization`). Аппаратная валидация iOS 15–17 не выполнена; страница Desktop
+в браузерном веб-предпросмотре показывает только отсутствие native backend.

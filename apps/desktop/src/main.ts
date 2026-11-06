@@ -3,13 +3,23 @@ import {
   canInstall,
   escapeHtml as e,
   maskedId,
+  parseTweakValue,
   preferences,
   signingActive,
-  type SigningView,
+  tweakMatchesFilter,
+  tweakSectionLabels,
+  tweakStatusHints,
+  tweakTargetModelGroups,
+  tweakValueDisplay,
+  type DraftPreview,
   type Entry,
   type Ipa,
   type Page,
   type Scan,
+  type SigningView,
+  type TweaksCatalogView,
+  type TweakSummary,
+  type TweakValue,
 } from "./model";
 import "./style.css";
 import logoUrl from "../../../assets/branding/meganugget-logo.svg";
@@ -42,6 +52,19 @@ let signingTimer: ReturnType<typeof setInterval> | undefined;
 let signingPollRunning = false;
 const signActive = () => signingActive(signing.status.phase);
 const native = isTauri();
+// Tweak drafts: offline catalog + explicit-selection draft compiled in Rust.
+// Nothing here ever applies to a device; the backend has no transport.
+let tweaks: TweaksCatalogView | null = null;
+let tweaksStale = true;
+let tweakSearch = "";
+let tweakOnlyCandidates = false;
+let tweakOpenId = "";
+const tweakDraft: Record<string, TweakValue> = {};
+let tweakEditorText = "";
+let tweakEditorBool = true;
+let tweakTargetModel = "iPhone9,1";
+let tweakTargetVersion = "15.8.8";
+let tweakPreview: DraftPreview | null = null;
 const t = (ru: string, en: string) => (prefs.locale === "ru" ? ru : en);
 const errorHints: Record<string, [string, string]> = {
   unsupported_signing_bundle: [
@@ -60,6 +83,34 @@ const errorHints: Record<string, [string, string]> = {
     "iOS на устройстве ниже минимальной версии выбранного IPA.",
     "The device iOS is older than the IPA requires.",
   ],
+  tweaks_empty_selection: [
+    "Черновик пуст: добавьте хотя бы один твик.",
+    "The draft is empty: add at least one tweak.",
+  ],
+  tweaks_too_many_selections: [
+    "В одном черновике не более 64 пунктов.",
+    "One draft holds at most 64 items.",
+  ],
+  tweaks_unknown_tweak: [
+    "Черновик содержит твик, которого нет в каталоге.",
+    "The draft names a tweak that is not in the catalog.",
+  ],
+  tweaks_blocked_tweak: [
+    "Один из выбранных твиков недоступен для этой модели или версии iOS.",
+    "One of the selected tweaks is unavailable for this model or iOS version.",
+  ],
+  tweaks_invalid_value: [
+    "Значение не соответствует типу или допустимому диапазону твика.",
+    "The value does not match the tweak’s type or allowed range.",
+  ],
+  tweaks_conflict: [
+    "Выбранные твики противоречат друг другу.",
+    "The selected tweaks contradict each other.",
+  ],
+  tweaks_compile_failed: [
+    "Компилятор не смог построить корректный XML plist; черновик остался без изменений.",
+    "The compiler could not produce a valid XML plist; the draft is unchanged.",
+  ],
 };
 function describeError(raw: string): string {
   const [ru, en] = errorHints[raw] ?? [raw, raw];
@@ -77,6 +128,8 @@ const icons: Record<string, string> = {
   shield: '<path d="m12 2 9 4v6c0 5-9 10-9 10S3 17 3 12V6zM8 12l3 3 5-6"/>',
   arrow: '<path d="M4 12h16m-6-6 6 6-6 6"/>',
   usb: '<path d="M12 21V3m-3 3 3-3 3 3M12 16l-6-4V8m6 5 6-4V6"/><circle cx="6" cy="7" r="1"/><path d="M17 3h2v3h-2z"/><circle cx="12" cy="21" r="1"/>',
+  tweaks:
+    '<path d="M3 7h9m6 0h3M3 17h3m6 0h9M3 12h16"/><circle cx="14" cy="7" r="2"/><circle cx="8" cy="17" r="2"/><circle cx="21" cy="12" r="2"/>',
 };
 const icon = (name: string, cls = "") =>
   `<svg class="icon ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] ?? icons.shield}</svg>`;
@@ -84,6 +137,7 @@ const names = () => ({
   home: t("Обзор", "Home"),
   devices: t("Устройства", "Device Manager"),
   installer: t("Установка IPA", "App Installer"),
+  tweaks: t("Твики · черновики", "Tweaks · drafts"),
   logs: t("Журнал событий", "Logs"),
   settings: t("Настройки", "Settings"),
 });
@@ -149,6 +203,253 @@ function installer(): string {
     <div class="install-footer"><span>${t("Подпись не устанавливает приложение автоматически. Установка может заменить приложение с тем же Bundle ID.", "Signing does not install automatically. Installation can replace an app with the same bundle ID.")}</span>${button("install", t("Установить на iPhone", "Install on iPhone"), "installer", !native || !canInstall(scan, current(), ipa, busy || signActive()))}</div>
     ${signed ? `<div class="export-ipa">${button("save-ipa", t("Сохранить подписанный IPA", "Save signed IPA"), "installer", !native || signActive(), true)}<small>${t("Файл содержит provisioning с идентификаторами устройства. Не публикуйте его.", "Contains device provisioning identifiers. Do not publish it.")}</small></div>` : ""}</section>
     <p class="footnote">${t("После установки проверяются Bundle ID и версия. Это не подтверждает запуск. Подпись не снижает минимальную версию iOS и не даёт jailbreak.", "Bundle ID and version are checked after installation, not app launch. Signing does not lower minimum iOS or provide a jailbreak.")}</p>`;
+}
+
+function tweaksPage(): string {
+  if (!native)
+    return `<section class="card panel"><h2>${t("Каталог твиков", "Tweak catalog")}</h2><p>${t("Страница доступна только в Desktop-приложении: каталог и компилятор черновиков работают в локальном Rust-backend. Веб-предпросмотр не имеет IPC-доступа и не показывает данные каталога.", "This page is available only in the Desktop app: the catalog and the draft compiler run in the local Rust backend. The web preview has no IPC access and shows no catalog data.")}</p></section>`;
+  if (!tweaks)
+    return `<section class="card panel"><div class="empty-state">${icon("tweaks")}<h3>${t(
+      "Каталог загружается",
+      "Loading the catalog",
+    )}</h3><p>${t(
+      "Офлайн-каталог закреплённой ревизии загружается из локального backend.",
+      "The offline catalog of the pinned revision is loading from the local backend.",
+    )}</p></div></section>`;
+  const counts = tweaks.counts;
+  const stale = tweaksStale
+    ? `<span class="chip warning">${t("устанавливается…", "refreshing…")}</span>`
+    : "";
+  const settled = counts.invalid_device + counts.outside_legacy_scope;
+  const info = current()?.device.info;
+  return `
+  <div class="notice-banner">${icon("shield")}<div><strong>${t(
+    "Черновики, а не применение",
+    "Drafts, not application",
+  )}</strong><p>${t(
+    "Каталог — снепшот твиков GoldenNugget (закреплённая ревизия). Страница строит XML-черновики локально; на устройство ничего не отправляется и не применяется. Файлы предназначены для будущей проверки канала backup/restore.",
+    "The catalog is a GoldenNugget tweak snapshot (pinned revision). This page compiles XML drafts locally; nothing is sent to or applied on a device. The files are meant for a future, separately validated backup/restore channel.",
+  )}</p></div></div>
+  <section class="card panel">
+    <div class="section-heading"><div><span class="eyebrow">OFFLINE SNAPSHOT</span><h2>${t(
+      "Цель черновика",
+      "Draft target",
+    )}</h2></div><span class="pill outline">${icon("shield")}${t(
+      "Без jailbreak",
+      "No jailbreak",
+    )}</span></div>
+    <div class="two-col tweak-target">
+      <label class="device-select">${t("Модель", "Model")}<select id="tweak-model" ${busy ? "disabled" : ""}>${tweakTargetModelGroups
+        .map(
+          (group) =>
+            `<optgroup label="${e(group.group[prefs.locale === "ru" ? 0 : 1])}">${group.models
+              .map(
+                (model) =>
+                  `<option value="${e(model)}" ${model === tweakTargetModel ? "selected" : ""}>${e(model)}</option>`,
+              )
+              .join("")}</optgroup>`,
+        )
+        .join("")}</select></label>
+      <label class="device-select">${t("Версия iOS", "iOS version")}<input id="tweak-version" type="text" inputmode="decimal" value="${e(
+        tweakTargetVersion,
+      )}" maxlength="15" ${busy ? "disabled" : ""} placeholder="15.8.8"></label>
+    </div>
+    <div class="tweak-actions">${button(
+      "tweak-use-device",
+      t("Взять подключённое устройство", "Use the connected device"),
+      "usb",
+      !info,
+      true,
+    )}${info ? `<span class="tweak-device-hint">${e(info.ProductType)} · iOS ${e(info.ProductVersion)}</span>` : ""}${stale}</div>
+    ${
+      settled
+        ? `<p class="footnote">${t(
+            "Строки с неверными данными устройства или вне iOS 15–17 не попадают в черновики. Проверка строгая: некорректная версия запрещает все строки.",
+            "Rows with invalid device data or outside iOS 15–17 are never drafted. Validation is strict: a malformed version blocks every row.",
+          )}</p>`
+        : ""
+    }
+    <div class="stats tweaks-stats"><div class="stat card"><span>${icon("tweaks")}${t("Всего строк", "Total rows")}</span><strong>${counts.total}</strong><small>${e(
+      tweaks.registry_count,
+    )} ${t("значений в реестре upstream", "upstream registry entries")}</small></div><div class="stat card"><span>${icon("shield")}${t("Кандидаты черновиков", "Draft candidates")}</span><strong>${counts.candidates}</strong><small>${t(
+      "Для этой модели и версии iOS",
+      "For this model and iOS version",
+    )}</small></div><div class="stat card"><span>${icon("logs")}${t("Заблокировано гейтами", "Blocked by gates")}</span><strong>${counts.total - counts.candidates - settled}</strong><small>${t(
+      "iOS новее / не в снепшоте / модель и т.д.",
+      "Newer iOS / not in snapshot / model and so on",
+    )}</small></div></div>
+    <div class="tweak-source"><span>${t("Источник данных", "Data source")}:</span><code>${e(
+      tweaks.repository,
+    )}</code><code>${e(tweaks.revision)}</code></div>
+  </section>
+  ${tweakEditor()}`;
+}
+
+function tweakEditor(): string {
+  if (!tweaks) return "";
+  const counts = tweaks.counts;
+  const visible = tweaks.entries
+    .filter((entry) =>
+      tweakMatchesFilter(entry, tweakSearch, tweakOnlyCandidates),
+    )
+    .slice(0, 120);
+  const hidden =
+    tweaks.entries.filter((entry) =>
+      tweakMatchesFilter(entry, tweakSearch, tweakOnlyCandidates),
+    ).length - visible.length;
+  const draftIds = Object.keys(tweakDraft).sort((a, b) => a.localeCompare(b));
+  const draftRows = draftIds
+    .map((id) => {
+      const draft = tweaks?.entries.find((entry) => entry.id === id);
+      if (!draft) return "";
+      return `<div class="tweak-draft-row"><code>${e(id)}</code><span>${e(
+        tweakValueDisplay(tweakDraft[id]!),
+      )}</span><button class="icon-button" data-tweak="remove" data-tweak-id="${e(id)}" aria-label="${t(
+        "Убрать из черновика",
+        "Remove from draft",
+      )}">✕</button></div>`;
+    })
+    .join("");
+  const draftPanel = `<section class="card panel tweak-draft"><div class="section-heading"><div><span class="eyebrow">DRAFT · LOCAL ONLY</span><h2>${t(
+    "Черновик",
+    "Draft",
+  )}</h2></div><span class="pill ${draftIds.length ? "" : "outline"}">${draftIds.length} / 64</span></div>${
+    draftIds.length
+      ? `<div class="tweak-draft-list">${draftRows}</div>`
+      : `<p class="tweak-hint">${t(
+          "Черновик пуст. Откройте строку каталога и задайте значение — «вкл/выкл» либо число/текст.",
+          "The draft is empty. Open a catalog row and set its value — on/off or a number/text.",
+        )}</p>`
+  }<div class="tweak-actions">${button(
+    "tweak-compile",
+    t("Собрать XML-предпросмотр", "Compile XML preview"),
+    "installer",
+    !native,
+  )}${draftIds.length ? button("tweak-clear-draft", t("Очистить", "Clear"), "shield", false, true) : ""}</div>${
+    tweakPreview
+      ? `<div class="draft-meta">${row(t("Выбрано пунктов", "Selected items"), tweakPreview.selected_count)}${row(
+          "Applied to device",
+          t("Нет · черновик не применяется", "No · the draft is never applied"),
+        )}</div>${tweakPreview.files
+          .map(
+            (file) =>
+              `<div class="draft-file"><div class="section-heading"><h3><code>${e(
+                file.domain,
+              )}</code></h3><code>${e(file.relative_path)}</code></div><pre class="draft-xml">${e(
+                file.xml,
+              )}</pre></div>`,
+          )
+          .join("")}`
+      : `<p class="tweak-hint">${t(
+          "Компиляция требует непустой черновик и не трогает устройство: результат — только XML в памяти.",
+          "Compilation requires a non-empty draft and never touches a device: the result is XML in memory only.",
+        )}</p>`
+  }</section>`;
+  const rows = visible.map(tweakRow).join("");
+  return `
+  ${draftPanel}
+  <section class="card panel">
+    <div class="section-heading"><div><span class="eyebrow">CATALOG SNAPSHOT</span><h2>${t(
+      "Каталог твиков",
+      "Tweak catalog",
+    )}</h2></div><span class="pill outline">${counts.candidates} ${t(
+      "доступно",
+      "available",
+    )}</span></div>
+    <div class="tweak-toolbar">
+      <input id="tweak-search" type="search" placeholder="${t(
+        "Поиск по id или названию",
+        "Search by id or title",
+      )}" value="${e(tweakSearch)}" ${busy ? "disabled" : ""} autocomplete="off">
+      <label class="setting-row tweak-only"><input id="tweak-only-candidates" type="checkbox" ${tweakOnlyCandidates ? "checked" : ""}><span>${t(
+        "Только кандидаты",
+        "Candidates only",
+      )}</span></label>
+    </div>
+    <div class="tweak-chips">${(
+      [
+        "draft_candidate",
+        "requires_newer_ios",
+        "upstream_unavailable",
+        "hardware_mismatch",
+        "outside_legacy_scope",
+        "invalid_device",
+        "mechanism_not_ported",
+      ] as const
+    )
+      .map(
+        (statusKey) =>
+          `<span class="tweak-chip ${statusKey}">${e(
+            tweakStatusHints[statusKey][prefs.locale === "ru" ? 0 : 1],
+          )} · <strong>${counts[statusKey === "draft_candidate" ? "candidates" : statusKey]}</strong></span>`,
+      )
+      .join("")}</div>
+    <div class="tweak-list">${
+      rows ||
+      `<div class="empty-state">${icon("tweaks")}<h3>${t(
+        "Ничего не найдено",
+        "Nothing found",
+      )}</h3><p>${t(
+        "Измените поиск или снимите фильтр «только кандидаты».",
+        "Change the search or clear the candidates-only filter.",
+      )}</p></div>`
+    }</div>
+    ${hidden ? `<p class="footnote">${t("Скрыто длинным списком", "Hidden by list length")}: ${hidden}</p>` : ""}
+  </section>`;
+}
+
+function tweakRow(entry: TweakSummary): string {
+  const inDraft = entry.id in tweakDraft;
+  const editable = entry.status === "draft_candidate";
+  const statusHint =
+    tweakStatusHints[entry.status][prefs.locale === "ru" ? 0 : 1];
+  const sectionLabel =
+    tweakSectionLabels[entry.section]?.[prefs.locale === "ru" ? 0 : 1];
+  const open = tweakOpenId === entry.id;
+  const controls = !editable
+    ? ""
+    : open
+      ? `<div class="tweak-edit" data-tweak-edit="${e(entry.id)}">${
+          entry.kind === "toggle"
+            ? `<label class="setting-row"><span>${t("Значение", "Value")}<small>${t("вкл — записать включённое состояние, выкл — выключенное", "on — write the enabled state, off — the disabled one")}</small></span><input id="tweak-editor-bool" type="checkbox" ${tweakEditorBool ? "checked" : ""}></label>`
+            : `<label class="tweak-field">${entry.kind === "number" ? t("Число", "Number") : t("Текст", "Text")}<input id="tweak-editor-input" type="text" inputmode="${entry.kind === "number" ? "decimal" : "text"}" value="${e(
+                tweakEditorText || tweakValueDisplay(entry.default_value),
+              )}" maxlength="1024" autocomplete="off"></label>`
+        }<div class="tweak-actions">${`<button class="button" data-tweak="save" data-tweak-id="${e(
+          entry.id,
+        )}">${icon("shield")}${t("Сохранить в черновик", "Save to draft")}</button>`}<button class="button secondary" data-tweak="close" data-tweak-id="${e(
+          entry.id,
+        )}">${t("Отмена", "Cancel")}</button></div></div>`
+      : `<div class="tweak-actions">${
+          inDraft
+            ? `<button class="button secondary" data-tweak="open" data-tweak-id="${e(
+                entry.id,
+              )}">${t("Изменить", "Edit")}</button><button class="icon-button" data-tweak="remove" data-tweak-id="${e(
+                entry.id,
+              )}" aria-label="${t("Убрать из черновика", "Remove from draft")}">✕</button>`
+            : `<button class="button secondary" data-tweak="open" data-tweak-id="${e(
+                entry.id,
+              )}">${t("Добавить в черновик", "Add to draft")}</button>`
+        }</div>`;
+  return `<div class="tweak-row ${open ? "open" : ""} ${editable ? "" : "locked"}"><div class="tweak-head"><button class="tweak-title" data-tweak="${open ? "close" : "open"}" data-tweak-id="${e(
+    entry.id,
+  )}" ${editable ? "" : "disabled"}><strong>${e(entry.title)}</strong><code>${e(entry.id)}</code></button><span class="tweak-chip ${e(
+    entry.status,
+  )}">${e(statusHint)}</span></div><div class="tweak-meta"><span>${e(
+    sectionLabel ?? entry.section,
+  )}</span><span>${e(entry.destination)}</span><span><code>${e(
+    entry.key,
+  )}</code></span><span>${t("по умолчанию", "default")}: <code>${e(
+    tweakValueDisplay(entry.default_value),
+  )}</code></span>${
+    inDraft
+      ? `<span>${t("в черновике", "in draft")}: <code>${e(
+          tweakValueDisplay(tweakDraft[entry.id]!),
+        )}</code></span>`
+      : ""
+  }${entry.warning ? `<span class="warning-text">${e(entry.warning)}</span>` : ""}${
+    entry.detail ? `<span class="tweak-detail">${e(entry.detail)}</span>` : ""
+  }</div>${controls}</div>`;
 }
 
 function signingPanel(): string {
@@ -231,7 +532,7 @@ function render(): void {
   document.documentElement.lang = prefs.locale;
   document.documentElement.dataset.theme = prefs.theme;
   const titles = names();
-  root.innerHTML = `<aside class="sidebar"><a class="brand" href="#home" aria-label="MegaNugget Home">${logo("brand-mark")}<span>MegaNugget<small>LEGACY IOS CUSTOMIZATION</small></span></a><span class="nav-label">WORKSPACE</span><nav>${(Object.keys(titles) as Page[]).map((key) => `<button data-page="${key}" class="nav-item ${key === page ? "selected" : ""}" ${key === page ? 'aria-current="page"' : ""}>${icon(key)}${titles[key]}${key === "devices" && scan?.devices.length ? '<span class="nav-dot"></span>' : ""}</button>`).join("")}</nav><div class="sidebar-bottom"><div class="research-badge">${icon("shield")}<span>${t("Прозрачно по замыслу", "Transparent by design")}<small>${t("Без jailbreak", "No jailbreak")}</small></span></div><div class="version"><span class="tiny-dot"></span> LEGACY PREVIEW <span>v0.1.0</span></div></div></aside><main><header class="topbar"><span>MegaNugget <span class="slash">/</span> <strong>${titles[page]}</strong></span><span class="top-status"><span class="tiny-dot ${scan?.failure ? "amber" : ""}"></span>${status()}</span></header><div class="content"><div class="page-heading"><div><span class="eyebrow">YOUR DEVICE. YOUR STYLE.</span><h1>${titles[page]}</h1><p>${t("Знакомый iPhone. Новые возможности.", "A familiar iPhone. New possibilities.")}</p></div><span class="pill outline">${icon("shield")}${t("Без скрытых действий", "No hidden operations")}</span></div>${!native ? `<div class="notice-banner compact">${t("Веб-предпросмотр: нативный backend отсутствует. USB, выбор IPA и установка недоступны. Данные устройства не симулируются.", "Web preview: native backend absent. USB, IPA selection and installation are unavailable. No device data is simulated.")}</div>` : ""}${notice ? `<div role="status" class="notice-banner result">${e(notice)}</div>` : ""}${busy ? `<div role="status" class="busy"><span class="spinner"></span>${t("Ожидание реальной операции. Не отключайте устройство при установке.", "Waiting for the real operation. Do not disconnect during installation.")}</div>` : ""}${page === "settings" ? `<div class="product-identity">${logo("about-logo")}<div><strong>MegaNugget</strong><span>Legacy iOS Customization</span></div></div>` : ""}${{ home, devices, installer, logs: journal, settings }[page]()}<footer>MegaNugget <span>Open source. Open possibilities.</span><span>${t("Кастомизация старых iOS.", "Customization for older iOS.")}</span></footer></div></main>`;
+  root.innerHTML = `<aside class="sidebar"><a class="brand" href="#home" aria-label="MegaNugget Home">${logo("brand-mark")}<span>MegaNugget<small>LEGACY IOS CUSTOMIZATION</small></span></a><span class="nav-label">WORKSPACE</span><nav>${(Object.keys(titles) as Page[]).map((key) => `<button data-page="${key}" class="nav-item ${key === page ? "selected" : ""}" ${key === page ? 'aria-current="page"' : ""}>${icon(key)}${titles[key]}${key === "devices" && scan?.devices.length ? '<span class="nav-dot"></span>' : ""}</button>`).join("")}</nav><div class="sidebar-bottom"><div class="research-badge">${icon("shield")}<span>${t("Прозрачно по замыслу", "Transparent by design")}<small>${t("Без jailbreak", "No jailbreak")}</small></span></div><div class="version"><span class="tiny-dot"></span> LEGACY PREVIEW <span>v0.1.0</span></div></div></aside><main><header class="topbar"><span>MegaNugget <span class="slash">/</span> <strong>${titles[page]}</strong></span><span class="top-status"><span class="tiny-dot ${scan?.failure ? "amber" : ""}"></span>${status()}</span></header><div class="content"><div class="page-heading"><div><span class="eyebrow">YOUR DEVICE. YOUR STYLE.</span><h1>${titles[page]}</h1><p>${t("Знакомый iPhone. Новые возможности.", "A familiar iPhone. New possibilities.")}</p></div><span class="pill outline">${icon("shield")}${t("Без скрытых действий", "No hidden operations")}</span></div>${!native ? `<div class="notice-banner compact">${t("Веб-предпросмотр: нативный backend отсутствует. USB, выбор IPA и установка недоступны. Данные устройства не симулируются.", "Web preview: native backend absent. USB, IPA selection and installation are unavailable. No device data is simulated.")}</div>` : ""}${notice ? `<div role="status" class="notice-banner result">${e(notice)}</div>` : ""}${busy ? `<div role="status" class="busy"><span class="spinner"></span>${t("Ожидание реальной операции. Не отключайте устройство при установке.", "Waiting for the real operation. Do not disconnect during installation.")}</div>` : ""}${page === "settings" ? `<div class="product-identity">${logo("about-logo")}<div><strong>MegaNugget</strong><span>Legacy iOS Customization</span></div></div>` : ""}${{ home, devices, installer, tweaks: tweaksPage, logs: journal, settings }[page]()}<footer>MegaNugget <span>Open source. Open possibilities.</span><span>${t("Кастомизация старых iOS.", "Customization for older iOS.")}</span></footer></div></main>`;
   bind();
 }
 async function refreshLogs(): Promise<void> {
@@ -267,6 +568,46 @@ async function scanDevices(): Promise<void> {
       notice = `${t("Диагностика USB завершилась ошибкой", "USB diagnostics failed")}: ${scan.failure}`;
   });
 }
+async function refreshTweaks(): Promise<void> {
+  if (!native) return;
+  try {
+    const next = await invoke<TweaksCatalogView>("tweaks_catalog", {
+      model: tweakTargetModel,
+      systemVersion: tweakTargetVersion,
+      architecture: "arm64",
+    });
+    tweaks = next;
+    tweaksStale = false;
+    // A draft never survives a gate change: entries that stopped being
+    // candidates are dropped instead of failing the compile later.
+    for (const id of Object.keys(tweakDraft)) {
+      const entry = next.entries.find((item) => item.id === id);
+      if (!entry || entry.status !== "draft_candidate") delete tweakDraft[id];
+    }
+    tweakPreview = null;
+  } catch (error) {
+    tweaksStale = true;
+    notice = `${t(
+      "Каталог твиков недоступен",
+      "Tweaks catalog unavailable",
+    )}: ${describeError(String(error))}`;
+  }
+  render();
+}
+async function compileTweaks(): Promise<void> {
+  await action(async () => {
+    tweakPreview = await invoke<DraftPreview>("tweaks_preview", {
+      model: tweakTargetModel,
+      systemVersion: tweakTargetVersion,
+      architecture: "arm64",
+      draft: tweakDraft,
+    });
+    notice = t(
+      "Черновик собран локально. Это XML-предпросмотр: на устройство ничего не отправляется.",
+      "The draft was compiled locally. It is an XML preview: nothing is sent to the device.",
+    );
+  });
+}
 function save(): void {
   try {
     localStorage.setItem("meganugget.preferences", JSON.stringify(prefs));
@@ -295,6 +636,7 @@ function bind(): void {
       button.addEventListener("click", () => {
         page = button.dataset.page as Page;
         render();
+        if (page === "tweaks" && tweaksStale) void refreshTweaks();
         if (page === "logs" && !busy)
           void action(async () => {
             await refreshLogs();
@@ -460,6 +802,141 @@ function bind(): void {
       save();
     });
   }
+  document.querySelectorAll<HTMLElement>("[data-tweak]").forEach((element) =>
+    element.addEventListener("click", () => {
+      const kind = element.dataset.tweak ?? "";
+      const id = element.dataset.tweakId ?? "";
+      const entry = tweaks?.entries.find((item) => item.id === id);
+      if (kind === "close") {
+        tweakOpenId = "";
+        render();
+        return;
+      }
+      if (kind === "open") {
+        // Already-open rows collapse: the title acts as a toggle.
+        if (tweakOpenId === id) {
+          tweakOpenId = "";
+          render();
+          return;
+        }
+        if (!entry || entry.status !== "draft_candidate") return;
+        const draftValue = tweakDraft[id];
+        if (entry.kind === "toggle")
+          tweakEditorBool =
+            draftValue?.type === "bool"
+              ? draftValue.value
+              : entry.default_value.type === "bool"
+                ? entry.default_value.value
+                : true;
+        else
+          tweakEditorText = draftValue
+            ? tweakValueDisplay(draftValue)
+            : tweakValueDisplay(entry.default_value);
+        tweakOpenId = id;
+        render();
+        return;
+      }
+      if (kind === "save") {
+        if (!entry || entry.status !== "draft_candidate") {
+          tweakOpenId = "";
+          render();
+          return;
+        }
+        if (entry.kind === "toggle") {
+          const checkbox = document.getElementById(
+            "tweak-editor-bool",
+          ) as HTMLInputElement | null;
+          tweakDraft[id] = {
+            type: "bool",
+            value: checkbox ? checkbox.checked : tweakEditorBool,
+          };
+        } else {
+          const input = document.getElementById(
+            "tweak-editor-input",
+          ) as HTMLInputElement | null;
+          const parsed = parseTweakValue(entry, input?.value ?? "");
+          if (!parsed) {
+            notice = describeError("tweaks_invalid_value");
+            render();
+            return;
+          }
+          tweakDraft[id] = parsed;
+        }
+        tweakOpenId = "";
+        tweakPreview = null;
+        render();
+        return;
+      }
+      if (kind === "remove") {
+        delete tweakDraft[id];
+        if (tweakOpenId === id) tweakOpenId = "";
+        tweakPreview = null;
+        render();
+      }
+    }),
+  );
+  on("tweak-use-device", () => {
+    const info = current()?.device.info;
+    if (!info || busy) return;
+    tweakTargetModel = info.ProductType || "iPhone9,1";
+    tweakTargetVersion = info.ProductVersion || "15.8.8";
+    tweaksStale = true;
+    tweakPreview = null;
+    void refreshTweaks();
+  });
+  select("tweak-model", (value) => {
+    if (tweakTargetModel === value) return;
+    tweakTargetModel = value;
+    tweaksStale = true;
+    tweakPreview = null;
+    void refreshTweaks();
+  });
+  document
+    .getElementById("tweak-version")
+    ?.addEventListener("change", (event) => {
+      const value = (event.target as HTMLInputElement).value.trim();
+      if (tweakTargetVersion === value) return;
+      tweakTargetVersion = value;
+      tweaksStale = true;
+      tweakPreview = null;
+      void refreshTweaks();
+    });
+  document
+    .getElementById("tweak-search")
+    ?.addEventListener("input", (event) => {
+      const input = event.target as HTMLInputElement;
+      const caret = input.selectionStart ?? input.value.length;
+      tweakSearch = input.value;
+      render();
+      const next = document.getElementById(
+        "tweak-search",
+      ) as HTMLInputElement | null;
+      if (next) {
+        next.focus();
+        next.setSelectionRange(caret, caret);
+      }
+    });
+  document
+    .getElementById("tweak-only-candidates")
+    ?.addEventListener("change", (event) => {
+      tweakOnlyCandidates = (event.target as HTMLInputElement).checked;
+      render();
+    });
+  on("tweak-compile", () => {
+    if (!native) return;
+    if (!Object.keys(tweakDraft).length) {
+      notice = describeError("tweaks_empty_selection");
+      render();
+      return;
+    }
+    void compileTweaks();
+  });
+  on("tweak-clear-draft", () => {
+    for (const id of Object.keys(tweakDraft)) delete tweakDraft[id];
+    tweakOpenId = "";
+    tweakPreview = null;
+    render();
+  });
 }
 render();
 if (native && prefs.scanOnLaunch) void scanDevices();

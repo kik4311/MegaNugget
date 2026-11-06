@@ -11,6 +11,12 @@
 Границы и модификации: `docs/GOLDENNUGGET_PORT.md`; происхождение файлов и хэши:
 `LICENSES/GoldenNuggetMobile-import.json`.
 
+Производная данных для Desktop: `crates/customization/catalog.json` — машинно-сгенерированный
+снепшот 258 спецификаций реестра из закреплённого `TweakCatalog.swift`
+(репозиторий/ревизия/SHA-256 внутри файла). Он не заменяет импорт: свежесть проверяется
+`scripts/export_desktop_catalog.py --check`; лицензия данных — та же AGPL-3.0 с
+сохранёнными credits, ссылка на upstream остаётся в файле.
+
 Основная лицензия MegaNugget — AGPL-3.0-only; первоначальное MIT-уведомление
 сохранено в LICENSES/MIT-initial-code.txt (см. LICENSING.md).
 Лицензия проекта не заменяет лицензий зависимостей.

@@ -1,5 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod drafts;
+
 use diagnostics::{Event, Journal, Level};
 use futures_util::FutureExt;
 use serde::Serialize;
@@ -363,7 +365,9 @@ fn main() {
             begin_signing,
             signing_respond,
             cancel_signing,
-            export_signed_ipa
+            export_signed_ipa,
+            drafts::tweaks_catalog,
+            drafts::tweaks_preview
         ])
         .run(tauri::generate_context!())
         .expect("failed to start MegaNugget");

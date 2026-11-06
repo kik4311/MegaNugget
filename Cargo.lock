@@ -1183,6 +1183,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "customization"
+version = "0.1.0"
+dependencies = [
+ "plist",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "darling"
 version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3157,6 +3166,7 @@ dependencies = [
  "app-installer",
  "apple-signing",
  "compatibility",
+ "customization",
  "device-manager",
  "diagnostics",
  "futures-util",

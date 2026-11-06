@@ -7,6 +7,9 @@
 полный README/Credits и FORKING сохранены в `LICENSES/GoldenNuggetMobile-*`.
 Изменения и границы порта описаны в `docs/GOLDENNUGGET_PORT.md`; модифицированные
 файлы содержат датированные notices. Брендинг upstream не скопирован.
+Производные данные порта (`crates/customization/catalog.json`, снепшот реестра
+GoldenNugget для Desktop) распространяются на тех же условиях AGPL-3.0
+с атрибуцией upstream внутри файла.
 
 ## Собственный код и прежние уведомления
 
