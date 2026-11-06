@@ -1,5 +1,9 @@
 # Архитектура
 
+> Текущее направление: [MegaNugget Legacy](LEGACY_CUSTOMIZATION.md).
+> Разделы о jailbreak-оркестрации ниже исторические; новый iOS UI использует
+> `CustomizationCatalog`, не `JailbreakEngine`. Системного backend применения пока нет.
+
 ```text
 Desktop WebView (локальные HTML / CSS / TypeScript)
    │ 5 типизированных IPC-команд

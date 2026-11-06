@@ -1,6 +1,7 @@
 import Foundation
 
 public enum DiagnosticEvent: String, Codable, Sendable {
+    case appAppearanceChanged = "app_appearance_changed"
     case availabilityChecked = "availability_checked"
     case engineNotImplemented = "engine_not_implemented"
     case recoveryGuidanceOpened = "recovery_guidance_opened"
