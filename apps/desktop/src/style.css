@@ -420,20 +420,22 @@ small {
   background: #09080d;
 }
 .phone-glow {
-  display: grid;
-  place-items: center;
-  width: 60px;
-  height: 60px;
-  border-radius: 17px;
-  background: #30213e;
-  border: 1px solid #6f548c;
+  display: block;
+  flex: 0 0 64px;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  overflow: hidden;
   box-shadow: 0 0 40px #b48bff25;
   margin-bottom: 17px;
 }
 .hero-logo {
   display: block;
-  width: 60px;
-  height: 60px;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 .phone-art > span {
   font-size: 12px;
