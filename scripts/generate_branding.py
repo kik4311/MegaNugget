@@ -52,6 +52,7 @@ def generate():
         write(path, stream.getvalue())
 
     write(WEB / "meganugget-logo.svg", source)
+    write(ROOT / "apps/website/assets/meganugget-logo.svg", source)
     write(DESKTOP / "source.svg", source)
     for name, size in [("32x32.png", 32), ("128x128.png", 128),
                        ("128x128@2x.png", 256), ("icon.png", 512)]:

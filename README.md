@@ -36,6 +36,12 @@
 - Исходники SwiftUI, тестируемая Swift-библиотека, генерация проекта Xcode через XcodeGen.
 - Rust/TypeScript/Swift-тесты и конфигурация CI для Linux, Windows, macOS и iOS build.
 
+## Сайт
+
+Сайт проекта находится в [`apps/website`](apps/website/README.md).
+Локальный запуск: `python3 -m http.server 4174 --bind 127.0.0.1 --directory apps/website`.
+Публичный хостинг пока не настроен.
+
 ## Быстрый старт Desktop
 
 Установите **Rust stable**, **Node.js 22.12+** (рекомендуется актуальная LTS),

@@ -3,6 +3,7 @@
   "source_sha256": "e97e637abb386a7fb26356de1332cbb4174094e667d50bf14aa03eafd134fb06",
   "outputs": {
     "apps/desktop/public/branding/meganugget-logo.svg": "e97e637abb386a7fb26356de1332cbb4174094e667d50bf14aa03eafd134fb06",
+    "apps/website/assets/meganugget-logo.svg": "e97e637abb386a7fb26356de1332cbb4174094e667d50bf14aa03eafd134fb06",
     "apps/desktop/src-tauri/icons/source.svg": "e97e637abb386a7fb26356de1332cbb4174094e667d50bf14aa03eafd134fb06",
     "apps/desktop/src-tauri/icons/32x32.png": "6f15a10582f14d647d74b780b90b2d1caebb902259d8b223cc081f99dffbabee",
     "apps/desktop/src-tauri/icons/128x128.png": "33a99b37d565540a477ff1a3be7639914a7664fea73d6064eb0878355131ae11",
