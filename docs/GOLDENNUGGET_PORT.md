@@ -125,5 +125,8 @@ unit-тестов, не работа твиков на устройстве. Pyt
 `crates/customization/catalog.json`, но не заменяют компиляцию Swift.
 Rust-порт проверен локально: `cargo fmt --all --check`, `cargo clippy --workspace
 --all-targets -- -D warnings`, `cargo test --workspace` — без ошибок (12 тестов крейта
-`customization`). Аппаратная валидация iOS 15–17 не выполнена; страница Desktop
-в браузерном веб-предпросмотре показывает только отсутствие native backend.
+`customization`). Дополнено: страница Desktop проверена в реальном GTK-окне (debug-сборка, X11):
+каталог пришёл по IPC, редактор тумблера сохранил `SBHideLowPowerAlerts = true`
+в черновик (1/64), компиляция построила XML plist с `<key>…</key><true/>`,
+журнал записал `draft_compiled`. Это локальный цикл страницы, не применение
+на устройстве. Аппаратная валидация iOS 15–17 по-прежнему не выполнена.
