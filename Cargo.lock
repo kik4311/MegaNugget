@@ -156,6 +156,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "apply-channel"
+version = "0.1.0"
+dependencies = [
+ "customization",
+ "device-manager",
+ "plist",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "arbitrary"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

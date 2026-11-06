@@ -213,3 +213,26 @@ debug-сборка, X11): каталог загрузился через IPC д�
 Swift-UI вкладки «Твики» с iOS. CI направления: run `42234299147` (Swift-порт,
 ios job) и run `42250519670` (Desktop-черновики, все 5 jobs вкл. ios и windows) —
 зелёные; это компиляция и тесты, не работа твиков на устройстве.
+
+## Дополнение: apply-channel, read-only прототип (2026-11-06)
+
+Новый крейт `crates/apply-channel` (lib + CLI) — этап 1 канала backup/restore по
+[APPLY_CHANNEL.md](APPLY_CHANNEL.md). Restore-команд в крейте нет вообще; единственный
+вызов устройства — консент-гейтованный `idevicebackup2 backup`. Команды: `detect`,
+`inspect <dir>`, `verify <dir>`, `backup <dir> --consent-backup`. Коды ошибок:
+`usb_failed`, `lockdown_unreadable`, `device_not_found`, `target_mismatch`,
+`backup_tool_missing`, `backup_requires_consent`, `backup_failed`,
+`backup_unfinished`, `backup_layout_unsupported`.
+
+| Проверка | Результат |
+|---|---|
+| `cargo test -p apply-channel` | **12 passed** (консент-гейт, whitelist аргументов, exact-target гейт, SnapshotState, маскирование UDID, классификация макетов) |
+| `cargo clippy --workspace --all-targets -- -D warnings` / `cargo fmt --all -- --check` | чисто |
+| CLI `--help` / `backup <dir>` (без флага) | usage; `error: backup_requires_consent`, exit 1 — процесс не запускается |
+| CLI `verify /tmp` | `error: backup_layout_unsupported`, exit 1 |
+| CLI `detect` на подключённом iPhone 7 | JSON: iPhone9,3 · iOS 15.8.8 · `matches_target: true`, UDID замаскирован (`cb01…7637`), failures пуст |
+| Реальный `backup` | **не выполнялся в этой сессии** — только по явному согласию пользователя (объём диска, время) |
+
+Вывод команд — UTF-8 JSON из белых списков (ProductType, ProductVersion,
+SnapshotState, layout); в либу читаются Info.plist/Status.plist, но серийные
+номера/IMEI/телефон извлекаются и отбрасываются, а не печатаются.

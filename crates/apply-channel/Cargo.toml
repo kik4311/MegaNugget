@@ -1,0 +1,23 @@
+[package]
+name = "apply-channel"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "apply_channel"
+path = "src/lib.rs"
+
+[[bin]]
+name = "apply-channel"
+path = "src/main.rs"
+
+[dependencies]
+device-manager = { path = "../device-manager" }
+customization = { path = "../customization" }
+plist.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
