@@ -233,6 +233,20 @@ ios job) и run `42250519670` (Desktop-черновики, все 5 jobs вкл.
 | CLI `detect` на подключённом iPhone 7 | JSON: iPhone9,3 · iOS 15.8.8 · `matches_target: true`, UDID замаскирован (`cb01…7637`), failures пуст |
 | Реальный `backup` | **выполнен** (консент-гейтованный): ~10 мин, 3,9 ГБ, SnapshotState finished; `verify`/`inspect` на живом каталоге — ок; макет `manifest_sqlite`, 256 бакетов; причёсан отказ из-за ключей «Product Type» (пробел) в Info.plist |
 
+### Этап 2: plan (тот же день)
+
+| Проверка | Результат |
+|---|---|
+| `cargo test -p apply-channel` (полный) | **12 unit + 11 integration passed** (`tests/plan_tests.rs`: real-shape Manifest.db fixtures) |
+| `cargo clippy -p apply-channel --all-targets` / fmt | чисто (0 warnings) |
+| CLI `plan` на живом backup (draft: `SBHideLowPowerAlerts=true` → HomeDomain …/com.apple.springboard.plist) | **план построен**: `digest_verified: true` (SHA-1 сошёлся с Manifest.db), `case_variants: 2`, `add_key`, файлы backup не изменялись |
+| `plan` дважды в один out-файл | `plan_output_exists`, переопределения нет |
+| Диагностика | отключённый по умолчанию `MG_DEBUG=1` печатает только этапы/ошибки парсера, без данных |
+
+Шаги планировщика и формат черновика — в
+[APPLY_CHANNEL.md](APPLY_CHANNEL.md) (этап 2). Restore-команд по-прежнему нет;
+устройство не трогалось.
+
 Вывод команд — UTF-8 JSON из белых списков (ProductType, ProductVersion,
 SnapshotState, layout); в либу читаются Info.plist/Status.plist, но серийные
 номера/IMEI/телефон извлекаются и отбрасываются, а не печатаются.

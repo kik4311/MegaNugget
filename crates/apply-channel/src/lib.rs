@@ -16,6 +16,9 @@ use plist::Value;
 use serde::Serialize;
 use std::{cmp::Ordering, path::Path, path::PathBuf};
 
+pub mod manifest;
+pub mod plan;
+
 pub const BACKUP_TOOL: &str = "idevicebackup2";
 pub const BACKUP_TIMEOUT_SECS: u64 = 3 * 60 * 60;
 
@@ -36,6 +39,12 @@ pub enum Error {
     BackupFailed,
     BackupUnfinished,
     BackupLayoutUnsupported,
+    PlanItemNotFound,
+    PlanAmbiguousTarget,
+    PlanDigestMismatch,
+    PlanUnsupportedKind,
+    PlanBadDraft,
+    PlanOutputExists,
 }
 
 impl Error {
@@ -50,6 +59,12 @@ impl Error {
             Error::BackupFailed => "backup_failed",
             Error::BackupUnfinished => "backup_unfinished",
             Error::BackupLayoutUnsupported => "backup_layout_unsupported",
+            Error::PlanItemNotFound => "plan_item_not_found",
+            Error::PlanAmbiguousTarget => "plan_ambiguous_target",
+            Error::PlanDigestMismatch => "plan_digest_mismatch",
+            Error::PlanUnsupportedKind => "plan_unsupported_kind",
+            Error::PlanBadDraft => "plan_bad_draft",
+            Error::PlanOutputExists => "plan_output_exists",
         }
     }
 }
@@ -208,17 +223,27 @@ fn single_target_device(runner: &impl Runner) -> Result<String, Error> {
 }
 
 /// Locate the single UDID-named subdirectory of a backup directory.
-fn device_directory(dir: &Path) -> Result<(PathBuf, String), Error> {
-    let entries = std::fs::read_dir(dir).map_err(|_| Error::BackupLayoutUnsupported)?;
+pub(crate) fn device_directory(dir: &Path) -> Result<(PathBuf, String), Error> {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(error) => {
+            manifest::debug("backup dir", &error.to_string());
+            return Err(Error::BackupLayoutUnsupported);
+        }
+    };
     let mut found: Option<(PathBuf, String)> = None;
     for entry in entries.flatten() {
         let name = entry.file_name().to_string_lossy().into_owned();
         if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) && valid_udid(&name) {
             if found.is_some() {
+                manifest::debug("device dir", "multiple UDID dirs");
                 return Err(Error::BackupLayoutUnsupported);
             }
             found = Some((entry.path(), name));
         }
+    }
+    if found.is_none() {
+        manifest::debug("device dir", "no UDID dir found");
     }
     found.ok_or(Error::BackupLayoutUnsupported)
 }

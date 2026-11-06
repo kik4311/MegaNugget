@@ -13,11 +13,11 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use apply_channel::{detection, inspect_backup, verify_backup, Error};
+use apply_channel::{detection, inspect_backup, plan, verify_backup, Error};
 use device_manager::SystemRunner;
 
 const USAGE: &str =
-    "usage: apply-channel detect | inspect <dir> | verify <dir> | backup <dir> --consent-backup";
+    "usage: apply-channel detect | inspect <dir> | verify <dir> | plan <dir> <draft.json> <out.json> | backup <dir> --consent-backup";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -31,6 +31,11 @@ fn main() -> ExitCode {
         ["detect"] => run(detection(&runner)),
         ["inspect", dir] => run(inspect_backup(&PathBuf::from(dir))),
         ["verify", dir] => run(verify_backup(&PathBuf::from(dir))),
+        ["plan", dir, draft, out] => run(plan::plan_backup(
+            &PathBuf::from(dir),
+            &PathBuf::from(draft),
+            &PathBuf::from(out),
+        )),
         // No consent flag: refuse before touching anything (fail closed).
         ["backup", _] => run::<apply_channel::BackupSnapshot>(Err(Error::BackupRequiresConsent)),
         ["backup", dir, "--consent-backup"] => {

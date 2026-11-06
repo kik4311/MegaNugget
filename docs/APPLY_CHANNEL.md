@@ -43,7 +43,7 @@
 | Этап | Содержимое | Статус |
 |---|---|---|
 | 1 | Read-only: `detect`, `inspect`, `verify`, защитный `backup` (с consent) | реализовано; **реальный backup выполнен** (SnapshotState finished, 3,9 ГБ) |
-| 2 | `plan`: слияние draft ↔ backup (bplist diff, checksum Manifest) | **макет уже известен**: Manifest.db (SQLite) + Manifest.plist + 256 hash-бакетов |
+| 2 | `plan`: слияние draft ↔ backup (bplist diff, checksum Manifest) | реализовано; **реальный план построен** на живом backup (checksum OK, `add_key`) |
 | 3 | Собственно apply (restore) + per-key чтение эффекта + rollback | не начат |
 | 4 | Desktop UI + журнал-события (`backup_started`…) | не начат |
 
@@ -70,6 +70,58 @@ apply-channel backup <dir> --consent-backup   # только с явным со�
 
 Restore-команды в прототипе **нет и не будет**, пока не пройдёт этап 2/3:
 нарушение этого правила делает канал несуществующим, что бы ни декларировалось.
+
+## Этап 2: план слияния (реализовано 2026-11-06)
+
+```sh
+apply-channel plan <backup_dir> <draft.json> <out.json>
+```
+
+Команда только читает backup и черновик; единственная запись — сам план
+(`out.json`, существующий файл не перезаписывается — `plan_output_exists`).
+Новые коды ошибок: `plan_item_not_found`, `plan_ambiguous_target`,
+`plan_digest_mismatch`, `plan_unsupported_kind`, `plan_bad_draft`,
+`plan_output_exists`.
+
+Формат черновика (desktop-этап 4 будет строить его из каталога и явных выборов):
+
+```json
+{"items": [{
+  "id": "SBHideLowPowerAlerts", "kind": "toggle",
+  "key": "SBHideLowPowerAlerts", "domain": "HomeDomain",
+  "relative_path": "Library/Preferences/com.apple.springboard.plist",
+  "value": true
+}]}
+```
+
+Политика целевого файла: каталог GoldenNugget хранит путь твика
+(`/var/Managed Preferences/mobile/...`), а в backup такие файлы отсутствуют
+(IsFullBackup=false), поэтому этап 4 обязан явно задавать перекомпоновку
+спецификации → домен/путь backup — без доверия по умолчанию.
+
+Проверяемые шаги планировщика:
+
+1. verify-гейты (готовность backup + точная модель/версия);
+2. в Manifest.db ищется ровно одна запись (домен + относительный путь)
+   с `flags=1`; если по NOCASE найдены ещё варианты того же пути — отказ
+   `plan_ambiguous_target`, а при явном `accept_case_variants: true` в
+   элементах черновика план строится по точному регистру, сосед остаётся
+   нетронутым и попадает в отчёт (`case_variants`);
+3. блоб метаданных `file` (NSKeyedArchiver: `Digest` — SHA-1, `Size`,
+   `RelativePath`) расшифровывается; Digest может быть ссылкой UID на объект
+   bytes (так пишет реальный idevicebackup2) или inline data;
+4. SHA-1 реального файла из hash-бакета сверяется с `Digest` и `Size` —
+   при отказе `plan_digest_mismatch` ничего не планируется;
+5. читается целевой plist (bplist00), для каждого ключа вычисляется
+   `add_key`/`replace_value` и старое значение; в план печатается только
+   отчёт, файлы не изменяются.
+
+Живой прогон по настоящему backup (draft из примера — тумблер
+`SBHideLowPowerAlerts = true`): план построен без ошибок; в отчёте
+`digest_verified: true`, файл 3244 байта, 26 ключей, `case_variants: 2`
+(в манифесте блокирует оба регистра: настоящий
+`com.apple.springboard.plist` и 42-байтовый огрызок
+`com.apple.SpringBoard.plist`), действие `add_key` (ключа в plist нет).
 
 ## Что делает прототип НЕ делает
 
