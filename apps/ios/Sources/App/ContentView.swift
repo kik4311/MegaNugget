@@ -29,6 +29,8 @@ struct ContentView: View {
                             .foregroundColor(.secondary)
                         Text("Вдохновлено GoldenNugget Mobile. Системный механизм применения ещё не перенесён; ниже явно указано, что работает.")
                             .font(.footnote)
+                        Text("Во вкладке «Твики» доступен частичный порт каталога GoldenNugget: редактор и локальные XML-черновики для iOS 15–17.")
+                            .font(.footnote).foregroundColor(.secondary)
                     }
                     Section(header: Text("Устройство")) {
                         detail("Модель", device.model)
@@ -56,6 +58,11 @@ struct ContentView: View {
                 .tabItem { Label("Каталог", systemImage: "slider.horizontal.3") }
 
             NavigationView {
+                LegacyTweaksView(device: device)
+            }.navigationViewStyle(.stack)
+                .tabItem { Label("Твики", systemImage: "slider.horizontal.3") }
+
+            NavigationView {
                 List {
                     appearanceSection
                     Section(header: Text("Данные и подключения")) {
@@ -68,6 +75,8 @@ struct ContentView: View {
                             Text("MegaNugget").font(.headline)
                         }
                         Text("MegaNugget · AGPL-3.0. Собственный интерфейс для старых iOS; не официальный клиент GoldenNugget.")
+                        Text("Частичный порт кода GoldenNugget Mobile: awesomenull-dev и GoldenNugget contributors. Полные Credits и лицензия сохранены в LICENSES исходного проекта MegaNugget.")
+                            .font(.footnote).foregroundColor(.secondary)
                         Link("GoldenNugget Mobile · авторы и исходники", destination: URL(string: "https://github.com/GoldenNugget-Team/GoldenNugget-mobile")!)
                         Link("Исходники MegaNugget", destination: URL(string: "https://github.com/kik4311/MegaNugget")!)
                     }

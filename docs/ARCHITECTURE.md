@@ -4,6 +4,15 @@
 > Разделы о jailbreak-оркестрации ниже исторические; новый iOS UI использует
 > `CustomizationCatalog`, не `JailbreakEngine`. Системного backend применения пока нет.
 
+## Частичный порт GoldenNugget Mobile
+
+`apps/ios/Sources/Core/GoldenNuggetPort` содержит закреплённый лицензированный
+Foundation-каталог, модель, таблицу доменов и компилятор upstream. Публичная
+граница — `LegacyTweakPort`: каталог/редактор/локальная компиляция, без native
+transport. `LegacyTweaksView` использует эту границу во вкладке «Твики».
+Строгие версии и аппаратные gates не эквивалентны подтверждённой совместимости
+системных настроек. Полные изменения: [GOLDENNUGGET_PORT.md](GOLDENNUGGET_PORT.md).
+
 ```text
 Desktop WebView (локальные HTML / CSS / TypeScript)
    │ 5 типизированных IPC-команд

@@ -1,0 +1,179 @@
+![Artboard][NuggetLogo]
+
+# GoldenNugget (Mobile)
+Unlock your device's full potential, with iOS 27 support!
+
+Customize your device with animated wallpapers, disable pesky daemons, and more!
+
+Make sure you have installed the [requirements](#requirements) if you are on Windows or Linux.
+
+> [!NOTE]
+> Please back up your data before using this Project! GoldenNugget may cause unforeseen problems, so it is better to be safe than sorry. We are not responsible for any damage done to your device.
+
+> [!WARNING]
+>  **I AM NOT RESPONSIBLE IN ANY DATA LOSS OR BOOTLOOPS, IF SOMETHING GOES OFF ITS YOUR FAULT**
+## Discord server
+Wanted support? join our [Discord Server][server].
+
+## Features
+<details>
+<summary>iOS 26.2 - 27.0+</summary>
+
+- PosterBoard: Animated wallpapers and descriptors.
+  - Community wallpapers can be found [here][WallpapersWebsite] or [here][caplayground]
+  - Customizing community-made wallpapers via batter files
+  - Device-Specific wallpapers in MercuryPoster can be installed
+  - See documentation on the structure of tendies and batter files in [documentation.md](documentation.md)
+- Templates: Custom Operations and file editing
+  - See documentation on the structure of batter files in [documentation.md](documentation.md)
+- Springboard Options
+  - Set Lock Screen Footnote
+  - Set Lock Screen Idle Auto-Lock Time
+  - Disable Lock After Respring
+  - Disable Screen Dimming While Charging
+  - Disable Low Battery Alerts
+  - Hide AC Power on Lock Screen
+  - Show Supervision Text on Lock Screen
+  - Show Dynamic Island in Screenshots
+  - Enable AirPlay support for Stage Manager
+  - Show Red/Green Authentication Line on Lock Screen (See [this issue](https://github.com/leminlimez/Nugget/issues/656) for what it looks like)
+  - Disable Floating Tab Bar on iPads
+- Internal Options
+  - Build Version in Status Bar
+  - Force Right to Left
+  - Show Hidden Icons on Home Screen
+  - Force Metal HUD Debug
+  - iMessage Diagnostics
+  - IDS Diagnostics
+  - VC Diagnostics
+  - App Store Debug Gesture
+  - Notes App Debug Mode
+  - Show Touches With Debug Info
+  - Hide Respring Icon
+  - Play Sound on Paste
+  - Show Notifications for System Pastes
+- Disable Liquid Glass (iOS 26.0+):
+  - Ignore Liquid Glass App Build Check (iOS 26.0+)
+  - Force Solarium Fallback (iOS 26.0+, doesn't work on iOS 27 anymore)
+- Disable Daemons:
+  - OTAd
+  - UsageTrackingAgent
+  - Game Center
+  - Screen Time Agent
+  - Logs, Dumps, and Crash Reports
+  - ATWAKEUP
+  - Tipsd
+  - VPN
+  - Chinese WLAN service
+  - HealthKit
+  - AirPrint
+  - Assistive Touch
+  - iCloud
+  - Internet Tethering (aka Personal Hotspot)
+  - PassBook
+  - Spotlight
+</details>
+
+## Contributors 
+
+<div align="center">
+
+**Thanks everyone who contributes to project!** 🎉
+
+<a href="https://github.com/goldennugget-team/goldennugget-mobile/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=goldennugget-team/goldennugget-mobile" />
+</a>
+
+Want to see your name here? Open [Pull Request](https://github.com/GoldenNugget-Team/GoldenNugget-mobile/pulls)!
+
+</div>
+
+## Star History
+
+<a href="https://www.star-history.com/?type=date&repos=GoldenNugget-mobile%2FGoldenNugget-mobile">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=GoldenNugget-Team/GoldenNugget-mobile&type=date&theme=dark&legend=top-left&sealed_token=3Suw7Y0hFqwuBPijtmeM2A7pzK2ZCvEPoousYMJzOVFnPza-Aq5SzgNnEcgveIpQsBLEOL2QRtxwZbmaxn_S_3Lf9l0jINrMfRWkjFWGo3dVYCrFRpN6dA" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=GoldenNugget-Team/GoldenNugget-mobile&type=date&legend=top-left&sealed_token=3Suw7Y0hFqwuBPijtmeM2A7pzK2ZCvEPoousYMJzOVFnPza-Aq5SzgNnEcgveIpQsBLEOL2QRtxwZbmaxn_S_3Lf9l0jINrMfRWkjFWGo3dVYCrFRpN6dA" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=GoldenNugget-Team/GoldenNugget-mobile&type=date&legend=top-left&sealed_token=3Suw7Y0hFqwuBPijtmeM2A7pzK2ZCvEPoousYMJzOVFnPza-Aq5SzgNnEcgveIpQsBLEOL2QRtxwZbmaxn_S_3Lf9l0jINrMfRWkjFWGo3dVYCrFRpN6dA" />
+ </picture>
+</a>
+
+<div align="center">
+<br>We think you can star this repo if you think this is a good project.</br>
+</div>
+
+> [!NOTE]
+> ## Mobilegestalt
+> Don't even ask me for it. It will be NEVER implemented again. 
+
+## Requirements to build:
+Xcode 26+ or xtool with iOS 26+ SDK\
+Rust (minimuxer, idevice, NeoSpring and airlift)\
+Swift 6+ (Untested with older, may work)
+macOS 15.6 Sequoia+ or Ubuntu 22.04+
+
+# Contributing and forking.
+See [CONTRIBUTING.md](https://github.com/GoldenNugget-Team/GoldenNugget-mobile/blob/main/CONTRIBUTING.md), want fork instead? Then see [FORKING.md](https://github.com/GoldenNugget-Team/GoldenNugget-mobile/blob/main/FORKING.md)
+
+## HotLoad and updates
+
+HotLoad caches mobile safety rules for offline use. Settings includes its master switch,
+manual rule refresh and update checks. Available mobile releases appear on Home and
+in Settings with release notes and IPA links; install the IPA with your sideloading tool.
+See [rule format and behavior](docs/hotload-and-updates.md).
+
+## Credits
+- [awesomenull] Lead developer
+- [Wind0ws11Aero] for helping with development a lot.
+- [kik4311](https://github.com/kik4311) Co-developer.
+- [@mak5er](https://github.com/mak5er): AirCard developer.
+- [NeoSpring](https://github.com/rooootdev/neospring): Swift implementation by **[@skadz108](https://github.com/skadz108)** and **[@rooootdev](https://github.com/rooootdev)**, and **[@neonmodder123](https://github.com/neonmodder123)** for the WebKit GPU process respring technique.
+- [LeminLimez] for creating Nugget.
+- [0xjonhnnydev] for [AirLift]
+- [iTechExpert][iTechExpertTwitter] for various Springboard/Internal Options
+- [Mikasa-san][Mikasa-sanGitHub] for [Quiet Daemon][QuietDaemonGitHub]
+- [MiniVoidyy](https://github.com/MiniVoidyy) for additional system and analytics daemon lists.
+- [Snoolie](https://github.com/0xilis) for AAR handling.
+- [mattisklein](https://github.com/mattisklein) for Siri AI eligibility archives from Project Linwood.
+- [Prognosticate-X](https://github.com/Prognosticate-X/) for [iOS 27 status bar research](https://github.com/Prognosticate-X/ios27-carrier-lockscreen-research).
+
+[caplayground]: https://caplayground.vercel.app/wallpapers
+[i18n]: https://github.com/awesomenull-dev/gNugget-i18n
+[NuggetLogo]: https://github.com/GoldenNugget-Team/GoldenNugget-mobile/blob/main/layout/Applications/GoldenNuggetMobile.app/Logo%401x.png
+[LeminLimez]: https://github.com/leminlimez
+[CowabungaLite]: https://github.com/leminlimez/CowabungaLite
+[WallpapersWebsite]: https://cowabun.ga/wallpapers
+[AppleDevices]: https://apps.microsoft.com/detail/9np83lwlpz9k
+[iTunes]: https://support.apple.com/en-us/106372
+[usbmuxdGitHub]: https://github.com/libimobiledevice/usbmuxd
+[libimobiledeviceGitHub]: https://github.com/libimobiledevice/libimobiledevice
+[ShortcutsApp]: https://apps.apple.com/us/app/shortcuts/id915249334
+[MobilegestaltShortcut]: https://www.icloud.com/shortcuts/66bd3c822a0145b98d46cd1c9077e6e5
+[ReadMoreGist]: https://gist.github.com/leminlimez/c602c067349140fe979410ef69d39c28
+[Wind0ws11Aero]: https://github.com/Wind0ws11Aero
+[POEditorJoin]: https://poeditor.com/join/project/UTqpVSE2UD
+[JJTechGitHub]: https://github.com/JJTech0130
+[TrollStoreGitHub]: https://github.com/JJTech0130/TrollRestore
+[PosterRestoreDiscord]: https://discord.gg/gWtzTVhMvh
+[dootskyreX]: https://x.com/dootskyre
+[MiddoX]: https://x.com/MWRevamped
+[dularkGitHub]: https://github.com/dularkian
+[SerStarsX]: https://x.com/SerStars_lol
+[disfordottieX]: https://x.com/disfordottie
+[Mikasa-sanGitHub]: https://github.com/Mikasa-san
+[QuietDaemonGitHub]: https://github.com/Mikasa-san/QuietDaemon
+[sneakyf1shyGitHub]: https://github.com/f1shy-dev
+[lrdsnowGitHub]: https://github.com/Lrdsnow
+[EUEnablerGitHub]: https://github.com/Lrdsnow/EUEnabler
+[pymobiledevice3GitHub]: https://github.com/doronz88/pymobiledevice3
+[PySide6Doc]: https://doc.qt.io/qtforpython-6/
+[python-aar-stuffGitHub]: https://github.com/0xilis/python-aar-stuff
+[AIEligibilityGist]: https://gist.github.com/f1shy-dev/23b4a78dc283edd30ae2b2e6429129b5
+[bl_sbxGitHub]: https://github.com/khanhduytran0/bl_sbx/tree/main
+[DuyGitHub]: https://github.com/khanhduytran0
+[HuyTwitter]: https://x.com/Little_34306
+[iTechExpertTwitter]: https://twitter.com/iTechExpert21
+[server]: https://discord.gg/Rm6r4zeE3y
+[0xjonhnnydev]: https://github.com/0xjohnnydev
+[awesomenull]: https://github.com/awesomenull-dev
+[AirLift]: https://github.com/0xjohnnydev/airlift

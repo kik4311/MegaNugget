@@ -1,0 +1,24 @@
+{
+  "repository": "https://github.com/GoldenNugget-Team/GoldenNugget-mobile",
+  "revision": "e4be86f050f4980ccc58de3b74f9de58b070b705",
+  "upstream_sha256": {
+    "Nugget/Core/TweakCatalog.swift": "66e08b652c27107b037445549de5fb1abbb1d4fed643b28af358e6a6b33ab3d7",
+    "Nugget/Core/TweakCatalogDaemons.swift": "fd8dda52273295cece84b26184c8e5cd3e0fd3a7f972f2439913341451199dbb",
+    "Nugget/Core/TweakModel.swift": "05e6e1549e4b282e5a615941140249500b50082d5e425223b54c420cf4cce32b",
+    "Nugget/Core/TweakDomainMap.swift": "c2f59f5974a57ce288cb7c4e048a3b5d4bbf113840bbfb600ac0fc2658e92258",
+    "Nugget/Core/TweakCompiler.swift": "5fa7efa391a10ab0f9b312c037506bb9e6218135da70d34512ef2be7fe347f60",
+    "LICENSE": "8486a10c4393cee1c25392769ddd3b2d6c242d6ec7928e1414efff7dfb2f07ef",
+    "README.md": "a21ddbe9e1af240c334d1e5f77df70be000ef9a29aeadc5764939041a8474eb8",
+    "FORKING.md": "eef6573bc52accc8fa44198c5238399f22d1fb92de9d9f188cbb705480980cc6"
+  },
+  "outputs": {
+    "apps/ios/Sources/Core/GoldenNuggetPort/TweakCatalog.swift": "15d97489bee830029bee838641f91a9c882e3a72d211f288b9325b1b8cf3cfd8",
+    "apps/ios/Sources/Core/GoldenNuggetPort/TweakCatalogDaemons.swift": "1c7021e93524fc04d0eff3d427ff4f03f9fb1a3e70bf67e4ffed9679c8d8504e",
+    "apps/ios/Sources/Core/GoldenNuggetPort/TweakModel.swift": "6a94a989c541007df07720e5b9fa05a917e43f24662fdffec063d429c172384a",
+    "apps/ios/Sources/Core/GoldenNuggetPort/TweakDomainMap.swift": "f5ff18de6eef775450432a7b22f092e0c4429b55ede5a8ba3a360529b35620cb",
+    "apps/ios/Sources/Core/GoldenNuggetPort/TweakCompiler.swift": "a45320f2e1e913159965eacd54637b7739f0fa7e01ef48d8ed7c15bd95e240a7",
+    "LICENSES/GoldenNuggetMobile-AGPL-3.0.txt": "8486a10c4393cee1c25392769ddd3b2d6c242d6ec7928e1414efff7dfb2f07ef",
+    "LICENSES/GoldenNuggetMobile-README.upstream.md": "a21ddbe9e1af240c334d1e5f77df70be000ef9a29aeadc5764939041a8474eb8",
+    "LICENSES/GoldenNuggetMobile-FORKING.upstream.md": "eef6573bc52accc8fa44198c5238399f22d1fb92de9d9f188cbb705480980cc6"
+  }
+}

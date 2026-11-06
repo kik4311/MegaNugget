@@ -1,5 +1,15 @@
 # Лицензирование MegaNugget
 
+## Код GoldenNugget Mobile
+
+Часть MegaNugget — производная кода GoldenNugget Mobile авторства awesomenull-dev
+и GoldenNugget contributors. Исходная ревизия, неизменённая лицензия AGPL-3.0,
+полный README/Credits и FORKING сохранены в `LICENSES/GoldenNuggetMobile-*`.
+Изменения и границы порта описаны в `docs/GOLDENNUGGET_PORT.md`; модифицированные
+файлы содержат датированные notices. Брендинг upstream не скопирован.
+
+## Собственный код и прежние уведомления
+
 Основная лицензия этой версии проекта: **GNU Affero General Public License,
 version 3 only (AGPL-3.0-only)**. Полный текст — в `LICENSE`.
 Выбор AGPL подтверждён владельцем репозитория при первой загрузке исходников.

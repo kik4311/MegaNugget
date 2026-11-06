@@ -1,5 +1,16 @@
 # Сторонние компоненты
 
+## GoldenNugget Mobile (частичный source port)
+
+Источник: https://github.com/GoldenNugget-Team/GoldenNugget-mobile,
+ревизия `e4be86f050f4980ccc58de3b74f9de58b070b705`.
+Авторы: awesomenull-dev и GoldenNugget contributors; **полные credits сохранены**
+в `LICENSES/GoldenNuggetMobile-README.upstream.md`. Копия оригинальной AGPL-3.0
+в `LICENSES/GoldenNuggetMobile-AGPL-3.0.txt`, FORKING также сохранён.
+Импортируются пять Swift-файлов каталога/модели/компилятора, не графика/бренд.
+Границы и модификации: `docs/GOLDENNUGGET_PORT.md`; происхождение файлов и хэши:
+`LICENSES/GoldenNuggetMobile-import.json`.
+
 Основная лицензия MegaNugget — AGPL-3.0-only; первоначальное MIT-уведомление
 сохранено в LICENSES/MIT-initial-code.txt (см. LICENSING.md).
 Лицензия проекта не заменяет лицензий зависимостей.
