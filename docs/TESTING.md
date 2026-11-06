@@ -250,3 +250,20 @@ ios job) и run `42250519670` (Desktop-черновики, все 5 jobs вкл.
 Вывод команд — UTF-8 JSON из белых списков (ProductType, ProductVersion,
 SnapshotState, layout); в либу читаются Info.plist/Status.plist, но серийные
 номера/IMEI/телефон извлекаются и отбрасываются, а не печатаются.
+
+### Этап 3a: apply/merge + effect (тот же день)
+
+| Проверка | Результат |
+|---|---|
+| `cargo test -p apply-channel` (полный) | **20 unit + 25 integration passed**: plan 10, merge 9 (в т.ч. хэш-дерево исходника до/после, inode-инварианты, вложенный каталог, half-copy не остаётся), effect 6 (matched/missing/changed, дрейф целей), fixtуры вынесены в `tests/common/mod.rs` |
+| `LongRunner` (unit, unix) | 8 тестов: spawn-отказ → `restore_tool_missing`, маленький успех,потолок вывода 64 MiB не обрывает операцию (`truncated`, счётчик ≤ cap), kill-guard срабатывает, чужой exit-код → не success |
+| restore-гейты (unit) | без consent — `restore_requires_consent` **до** любого spawn; непроверенная копия — `backup_layout_unsupported`; whitelist `restore_args` = `-u <udid> restore <dir>` |
+| `cargo clippy -p apply-channel --all-targets` / fmt | чисто (0 warnings) |
+| CLI `apply` на живом backup | **merge выполнен за 0.18 с** (hardlinks): новый plist 2567 б. с 27 ключами (исходные 26 сохранены + `SBHideLowPowerAlerts=true`), `new_sha1` сошёлся с перезаписанной строкой Manifest.db копии, WAL сложен (`wal_checkpoint(TRUNCATE)`) |
+| `verify` на копии | ок: iPhone9,3 · iOS 15.8.8 · finished |
+| `effect` (pre=исходник, post=копия) | `status: matched`, `before: null → after: true` |
+| Целостность исходника | SHA-256 Manifest.db/-wal/-shm и целевого бакета **до и после merge — идентичны**; inode-проверки: Status.plist общий inode (nlink=2), Manifest.db/бакет — отдельные (копия) |
+| Отказы CLI | существующий каталог → `merge_output_exists` (содержимое не тронуто); вложенный → `merge_output_inside_source`; испорченный бакет → `plan_digest_mismatch` без создания копии |
+
+Restore на устройство **не запускался** — код и гейты пишутся и тестируются,
+фактическая запись ждёт отдельного явного согласия (этап 3b).

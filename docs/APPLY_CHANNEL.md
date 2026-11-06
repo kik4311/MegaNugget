@@ -44,7 +44,8 @@
 |---|---|---|
 | 1 | Read-only: `detect`, `inspect`, `verify`, защитный `backup` (с consent) | реализовано; **реальный backup выполнен** (SnapshotState finished, 3,9 ГБ) |
 | 2 | `plan`: слияние draft ↔ backup (bplist diff, checksum Manifest) | реализовано; **реальный план построен** на живом backup (checksum OK, `add_key`) |
-| 3 | Собственно apply (restore) + per-key чтение эффекта + rollback | не начат |
+| 3a | `apply`: merge draft в копию (`apply`, hardlink-копия, патч манифеста копии) + `effect` | реализовано; **реальный merge выполнен** в копию-соседа |
+| 3b | `restore`: единственная запись на устройство, двойной consent | реализовано в коде; **на устройство ещё не запускалось** (ждёт отдельного явного согласия) |
 | 4 | Desktop UI + журнал-события (`backup_started`…) | не начат |
 
 ## CLI прототипа (`crates/apply-channel`)
@@ -54,6 +55,10 @@ apply-channel detect                  # устройство, гейт цели,
 apply-channel inspect <dir>           # разбор структуры backup (Info/Status/макет)
 apply-channel verify <dir>            # SnapshotState == finished, гейт модели/версии
 apply-channel backup <dir> --consent-backup   # только с явным согласием
+apply-channel plan <dir> <draft.json> <out.json>          # этап 2
+apply-channel apply <dir> <draft.json> <applied_dir>      # этап 3a: merge в копию
+apply-channel restore <applied_dir> --consent-restore     # этап 3b: запись на устройство
+apply-channel effect <draft.json> <pre_dir> <post_dir>    # этап 3a: проверка ключей
 ```
 
 Вывод — однострочный JSON из белых списков (UDID только замаскированный), ошибки
@@ -68,8 +73,62 @@ apply-channel backup <dir> --consent-backup   # только с явным со�
 - `backup_tool_missing`, `backup_requires_consent`, `backup_failed`, `backup_unfinished`
 - `backup_layout_unsupported` — макет не распознан; **никакой записи** по неизвестному макету.
 
-Restore-команды в прототипе **нет и не будет**, пока не пройдёт этап 2/3:
-нарушение этого правила делает канал несуществующим, что бы ни декларировалось.
+Restore-команда сайта существует и требует **отдельного** явного согласия
+(`--consent-restore`): без флага — отказ до любого процесса
+(`restore_requires_consent`), с флагом — обычные гейты (копия проходит verify,
+ровно одно устройство целевой модели). В отличие от устройства: это первая
+запись на оборудование, перед ней — свежий backup, после — `effect`.
+
+## Этап 3a: merge в копию (`apply`) — реализовано 2026-11-06
+
+```sh
+apply-channel apply <backup_dir> <draft.json> <applied_dir>
+```
+
+- Исходный backup не открывается на запись вовсе. Копия — hardlink-дерево
+  (создание занимает секунды, доп. диск ≈ 0), в которой:
+  - целевые бакеты (planned fileID) **не** линкуются — в копию пишется свежий
+    plist (`bplist00`, все исходные ключи сохраняются + вставка);
+  - `Manifest.db` / `Manifest.db-wal` / `Manifest.db-shm` копируются по-настоящему
+    (реальный backup живёт в WAL-режиме; hardlink не позволил бы редактировать
+    копию, не задев исходник);
+  - после патчей WAL складывается в один файл (`PRAGMA wal_checkpoint(TRUNCATE)`);
+  - строка манифеста копии перезаписывается тем же NSKeyedArchiver-блобом со
+    свежими `Digest` (SHA-1, inline-форма) и `Size` — restore и последующие
+    проверки сходятся друг с другом;
+  - вся копия проходит те же verify-гейты, что и настоящий backup.
+- Отказы до создания чего-либо: существующий целевой каталог
+  (`merge_output_exists`, содержимое не трогается), вложенный каталог
+  (`merge_output_inside_source` — копия не может жить внутри исходника или
+  обнимать его), чужой draft/бакет — наследуют коды этапа 2
+  (`plan_item_not_found`, `plan_digest_mismatch`, …). При сбое посреди merge
+  недостроенная копия удаляется.
+- Живой прогон по настоящему backup: `apply` →
+  `backups/2026-11-06-iphone7-applied`; verify копии ок; `effect`
+  (pre=исходник, post=копия) — `SBHideLowPowerAlerts`: `before: null →
+  after: true`, `matched`; 26 исходных ключей сохранены (27 в копии);
+  хэши исходника до/после идентичны.
+
+## Этап 3b: `restore` — реализовано в коде, на устройстве НЕ запускалось
+
+```sh
+apply-channel restore <applied_dir> --consent-restore
+```
+
+- Порядок гейтов: consent → `verify_backup(копии)` → ровно одно подключённое
+  устройство целевой модели/версии → запуск.
+- Командная строка — белый список: `idevicebackup2 -u <udid> restore <dir>`;
+  никаких селективных флагов (`--system`/`--settings`/`--reboot` и пр.) нет.
+- Вывод процесса только осушается (drain) с жёстким потолком 64 MiB
+  (`LongRunner`): за потолком байты отбрасываются (флаг `truncated` в отчёте),
+  restore продолжается; сам вывод никогда не печатается — там были бы
+  устройства-пути с голым UDID.
+- Таймаут — не операционный, а анти-зависание: kill-guard 24 ч, mid-restore
+  kill по малому таймауту невозможен.
+- Коды: `restore_requires_consent`, `restore_tool_missing`, `restore_failed`.
+- После restore: пользователь делает свежий backup, затем
+  `apply-channel effect <draft> <pre> <post>` сверяет каждый ключ
+  (`status`: `matched` / `missing` / `changed`).
 
 ## Этап 2: план слияния (реализовано 2026-11-06)
 
@@ -127,7 +186,10 @@ apply-channel plan <backup_dir> <draft.json> <out.json>
 
 - Не запускает backup автоматически, не «предваряет» согласие молчаливым
   флагом и ничего не подменяет.
-- Не пишет в backup, не изменяет Manifest, не сжимает/не распаковывает файлы.
+- Не пишет в исходный backup, не изменяет его Manifest, не сжимает/не
+  распаковывает его файлы (магнит исключительно на свежую копию).
+- Не запускал restore ни разу: код и гейты написаны и покрыты тестами,
+  но запись на устройство ждёт отдельного явного согласия пользователя.
 - Не производит «предварительный» restore доменов, не «тестирует» запись.
 - Не хранит UDID и серийные номера в файлах отчётов; в stdout — только белый список.
 

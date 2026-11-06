@@ -1,9 +1,9 @@
 //! Read-only groundwork for the backup/restore apply channel (see
-//! `docs/APPLY_CHANNEL.md`). Nothing here writes to a device: the only
-//! device-spawning command supported is a consent-gated `idevicebackup2
-//! backup`, and the remaining commands read an existing local backup
-//! directory. Restore is deliberately absent until the merge stage is
-//! verified end to end.
+//! `docs/APPLY_CHANNEL.md`). The only device-spawning commands supported are
+//! a consent-gated `idevicebackup2 backup` and a consent-gated `restore`;
+//! everything else reads local backup directories. The restore accepts only
+//! a self-verified merged copy (see `merge`) and refuses without the consent
+//! flag before any process is spawned.
 //!
 //! Failure mode is "fail closed": every step stops on the first ambiguity,
 //! reports a stable snake_case code, and prints only whitelisted fields
@@ -16,11 +16,25 @@ use plist::Value;
 use serde::Serialize;
 use std::{cmp::Ordering, path::Path, path::PathBuf};
 
+pub mod effect;
 pub mod manifest;
+pub mod merge;
 pub mod plan;
+pub mod restore;
 
 pub const BACKUP_TOOL: &str = "idevicebackup2";
 pub const BACKUP_TIMEOUT_SECS: u64 = 3 * 60 * 60;
+pub const RESTORE_TOOL: &str = "idevicebackup2";
+
+/// The restore has no operational timeout: it may legitimately run for a
+/// couple of hours over USB. This deadline is purely a runaway kill-guard,
+/// chosen far beyond any real restore of this device.
+pub const RESTORE_TIMEOUT_SECS: u64 = 24 * 60 * 60;
+
+/// stdout/stderr of the restore are drained but only this many bytes are
+/// accounted for; past that, data is discarded (never buffered, never
+/// printed). The cap protects memory — the restore itself keeps running.
+pub const RESTORE_OUTPUT_CAP_BYTES: u64 = 64 * 1024 * 1024;
 
 /// The exact device this channel is allowed to touch: iPhone 7, iOS 15.8.8,
 /// GSM (9,1) or global (9,3). Any other model or build refuses with
@@ -45,6 +59,11 @@ pub enum Error {
     PlanUnsupportedKind,
     PlanBadDraft,
     PlanOutputExists,
+    MergeOutputExists,
+    MergeOutputInsideSource,
+    RestoreRequiresConsent,
+    RestoreToolMissing,
+    RestoreFailed,
 }
 
 impl Error {
@@ -65,6 +84,11 @@ impl Error {
             Error::PlanUnsupportedKind => "plan_unsupported_kind",
             Error::PlanBadDraft => "plan_bad_draft",
             Error::PlanOutputExists => "plan_output_exists",
+            Error::MergeOutputExists => "merge_output_exists",
+            Error::MergeOutputInsideSource => "merge_output_inside_source",
+            Error::RestoreRequiresConsent => "restore_requires_consent",
+            Error::RestoreToolMissing => "restore_tool_missing",
+            Error::RestoreFailed => "restore_failed",
         }
     }
 }
@@ -200,9 +224,9 @@ pub fn backup(
     verify_backup(target_dir)
 }
 
-/// Consent gate + exact-target gate enforced in one place, shared by `backup`.
-/// Returns the raw UDID (never serialized) on success.
-fn single_target_device(runner: &impl Runner) -> Result<String, Error> {
+/// Consent gate + exact-target gate enforced in one place, shared by `backup`
+/// and `restore`. Returns the raw UDID (never serialized) on success.
+pub(crate) fn single_target_device(runner: &impl Runner) -> Result<String, Error> {
     let scan = device_manager::scan(runner);
     if scan.devices.is_empty() {
         return Err(scan

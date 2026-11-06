@@ -98,6 +98,32 @@ impl Manifest {
     }
 }
 
+/// Open a *copy's* Manifest.db with write access so the merge can re-stamp
+/// Digest/Size rows. Only ever call this on a directory this process just
+/// created (see `merge_into_copy`): opening the manifest of an original
+/// backup read-write is exactly the accident this channel refuses to allow.
+pub(crate) fn open_patchable(path: &Path) -> Result<Connection, Error> {
+    if !path.is_file() {
+        return Err(Error::BackupLayoutUnsupported);
+    }
+    let conn = Connection::open(path)
+        .inspect_err(|error| debug("manifest rw open", &error.to_string()))
+        .map_err(|_| Error::BackupLayoutUnsupported)?;
+    let has_files: bool = conn
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='Files'",
+            [],
+            |row| row.get::<_, i64>(0),
+        )
+        .map(|count| count > 0)
+        .inspect_err(|error| debug("manifest rw schema", &error.to_string()))
+        .map_err(|_| Error::BackupLayoutUnsupported)?;
+    if !has_files {
+        return Err(Error::BackupLayoutUnsupported);
+    }
+    Ok(conn)
+}
+
 fn map_entry(row: &rusqlite::Row<'_>) -> rusqlite::Result<Entry> {
     Ok(Entry {
         file_id: row.get(0)?,

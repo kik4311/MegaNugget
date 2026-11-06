@@ -1,10 +1,14 @@
-//! CLI prototype of the apply channel — stage 1, read-only.
+//! CLI prototype of the apply channel.
 //!
 //! ```text
 //! apply-channel detect
 //! apply-channel inspect <dir>
 //! apply-channel verify <dir>
 //! apply-channel backup <dir> --consent-backup
+//! apply-channel plan <dir> <draft.json> <out.json>
+//! apply-channel apply <dir> <draft.json> <applied_dir>   # merge into a copy
+//! apply-channel restore <applied_dir> --consent-restore  # writes the device
+//! apply-channel effect <draft.json> <pre_dir> <post_dir>
 //! ```
 //!
 //! Errors are one-line stable snake_case codes on stderr (`error: <code>`,
@@ -13,11 +17,12 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use apply_channel::{detection, inspect_backup, plan, verify_backup, Error};
+use apply_channel::{
+    detection, effect, inspect_backup, merge, plan, restore, verify_backup, Error,
+};
 use device_manager::SystemRunner;
 
-const USAGE: &str =
-    "usage: apply-channel detect | inspect <dir> | verify <dir> | plan <dir> <draft.json> <out.json> | backup <dir> --consent-backup";
+const USAGE: &str = "usage: apply-channel detect | inspect <dir> | verify <dir> | plan <dir> <draft.json> <out.json> | apply <dir> <draft.json> <applied_dir> | restore <applied_dir> --consent-restore | effect <draft.json> <pre_dir> <post_dir> | backup <dir> --consent-backup";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -35,6 +40,23 @@ fn main() -> ExitCode {
             &PathBuf::from(dir),
             &PathBuf::from(draft),
             &PathBuf::from(out),
+        )),
+        ["apply", dir, draft, applied] => run(merge::merge_into_copy(
+            &PathBuf::from(dir),
+            &PathBuf::from(draft),
+            &PathBuf::from(applied),
+        )),
+        // No consent flag: refuse before touching anything (fail closed).
+        ["restore", _] => {
+            run::<apply_channel::restore::RestoreReport>(Err(Error::RestoreRequiresConsent))
+        }
+        ["restore", applied, "--consent-restore"] => {
+            run(restore::restore(&runner, &PathBuf::from(applied), true))
+        }
+        ["effect", draft, pre, post] => run(effect::effect(
+            &PathBuf::from(draft),
+            &PathBuf::from(pre),
+            &PathBuf::from(post),
         )),
         // No consent flag: refuse before touching anything (fail closed).
         ["backup", _] => run::<apply_channel::BackupSnapshot>(Err(Error::BackupRequiresConsent)),
