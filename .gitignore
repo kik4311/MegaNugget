@@ -1,6 +1,7 @@
 /target/
 /artifacts/
 apps/ios/build/
+apps/desktop-qt/build/
 **/__pycache__/
 **/node_modules/
 **/dist/

@@ -87,44 +87,50 @@ fn merge_keeps_source_backup_byte_identical() {
 
 #[test]
 fn merge_copy_shares_inodes_except_patched_targets() {
-    if !cfg!(unix) {
+    // inode / nlink checks need MetadataExt; skip compile on non-unix.
+    #[cfg(not(unix))]
+    {
         return;
     }
-    use std::os::unix::fs::MetadataExt;
 
-    let content = sample_plist(&[]);
-    let fixture = Fixture::new(vec![(LOWER_ID, LOWER_PATH, content, true)]);
-    let path = fixture.draft(&wrap(&toggle_item(LOWER_PATH, true)));
-    let applied = fixture.applied_target("applied");
-    merge_into_copy(&fixture.backing(), &path, &applied).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
 
-    // Shared inode: hardlinked files have the same inode number in copy and
-    // source, and the copy's link count grew by one.
-    let shared_source = fixture.dir.path().join(UDID).join("Status.plist");
-    let shared_copy = applied.join(UDID).join("Status.plist");
-    assert_eq!(
-        std::fs::metadata(&shared_source).unwrap().ino(),
-        std::fs::metadata(&shared_copy).unwrap().ino()
-    );
-    assert!(std::fs::metadata(&shared_copy).unwrap().nlink() >= 2);
+        let content = sample_plist(&[]);
+        let fixture = Fixture::new(vec![(LOWER_ID, LOWER_PATH, content, true)]);
+        let path = fixture.draft(&wrap(&toggle_item(LOWER_PATH, true)));
+        let applied = fixture.applied_target("applied");
+        merge_into_copy(&fixture.backing(), &path, &applied).unwrap();
 
-    // The patched target is a fresh file (new inode, single link).
-    let target_source = fixture.dir.path().join(UDID).join("66").join(LOWER_ID);
-    let target_copy = applied.join(UDID).join("66").join(LOWER_ID);
-    assert_ne!(
-        std::fs::metadata(&target_source).unwrap().ino(),
-        std::fs::metadata(&target_copy).unwrap().ino()
-    );
-    assert_eq!(std::fs::metadata(&target_copy).unwrap().nlink(), 1);
+        // Shared inode: hardlinked files have the same inode number in copy and
+        // source, and the copy's link count grew by one.
+        let shared_source = fixture.dir.path().join(UDID).join("Status.plist");
+        let shared_copy = applied.join(UDID).join("Status.plist");
+        assert_eq!(
+            std::fs::metadata(&shared_source).unwrap().ino(),
+            std::fs::metadata(&shared_copy).unwrap().ino()
+        );
+        assert!(std::fs::metadata(&shared_copy).unwrap().nlink() >= 2);
 
-    // The SQLite manifest family is copied, not hardlinked (WAL mode).
-    let manifest_source = fixture.dir.path().join(UDID).join("Manifest.db");
-    let manifest_copy = applied.join(UDID).join("Manifest.db");
-    assert_ne!(
-        std::fs::metadata(&manifest_source).unwrap().ino(),
-        std::fs::metadata(&manifest_copy).unwrap().ino()
-    );
-    assert_eq!(std::fs::metadata(&manifest_source).unwrap().nlink(), 1);
+        // The patched target is a fresh file (new inode, single link).
+        let target_source = fixture.dir.path().join(UDID).join("66").join(LOWER_ID);
+        let target_copy = applied.join(UDID).join("66").join(LOWER_ID);
+        assert_ne!(
+            std::fs::metadata(&target_source).unwrap().ino(),
+            std::fs::metadata(&target_copy).unwrap().ino()
+        );
+        assert_eq!(std::fs::metadata(&target_copy).unwrap().nlink(), 1);
+
+        // The SQLite manifest family is copied, not hardlinked (WAL mode).
+        let manifest_source = fixture.dir.path().join(UDID).join("Manifest.db");
+        let manifest_copy = applied.join(UDID).join("Manifest.db");
+        assert_ne!(
+            std::fs::metadata(&manifest_source).unwrap().ino(),
+            std::fs::metadata(&manifest_copy).unwrap().ino()
+        );
+        assert_eq!(std::fs::metadata(&manifest_source).unwrap().nlink(), 1);
+    }
 }
 
 #[test]
