@@ -85,7 +85,7 @@ pub(crate) struct LongOutcome {
     pub killed: bool,
     pub truncated: bool,
     /// Accounted bytes (bounded by the cap); asserted in tests only.
-    #[cfg_attr(not(test), allow(dead_code))]
+    #[cfg_attr(not(all(test, unix)), allow(dead_code))]
     pub bytes: u64,
 }
 
@@ -115,7 +115,7 @@ impl<'a> LongRunner<'a> {
         self
     }
 
-    #[cfg_attr(not(test), allow(dead_code))]
+    #[cfg_attr(not(all(test, unix)), allow(dead_code))]
     pub(crate) fn poll(mut self, poll: Duration) -> Self {
         self.poll = poll;
         self

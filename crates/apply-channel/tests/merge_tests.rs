@@ -87,12 +87,7 @@ fn merge_keeps_source_backup_byte_identical() {
 
 #[test]
 fn merge_copy_shares_inodes_except_patched_targets() {
-    // inode / nlink checks need MetadataExt; skip compile on non-unix.
-    #[cfg(not(unix))]
-    {
-        return;
-    }
-
+    // inode / nlink checks need MetadataExt; the body is unix-only.
     #[cfg(unix)]
     {
         use std::os::unix::fs::MetadataExt;
