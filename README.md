@@ -2,8 +2,8 @@
 
 # MegaNugget
 
-**Кастомизация старых iOS без jailbreak**: SwiftUI-клиент и Tauri Desktop
-для подписи/установки. Первая цель переноса — **iPhone 7 (iPhone9,1/9,3), iOS 15.8.8**.
+**Кастомизация старых iOS без jailbreak**: SwiftUI-клиент и Desktop
+для подписи/установки (сейчас Tauri; идёт переписывание на C++/Qt 6). Первая цель переноса — **iPhone 7 (iPhone9,1/9,3), iOS 15.8.8**.
 Это цель разработки, а не заявление о работающих системных твиках.
 
 MegaNugget включает **частичный порт кода GoldenNugget Mobile** авторства
@@ -49,6 +49,22 @@ Credits и лицензия сохранены в `LICENSES/GoldenNuggetMobile-*
 - Обезличенный JSON-журнал: закрытый набор кодов событий, без вывода команд.
 - Исходники SwiftUI, тестируемая Swift-библиотека, генерация проекта Xcode через XcodeGen.
 - Rust/TypeScript/Swift-тесты и конфигурация CI для Linux, Windows, macOS и iOS build.
+
+## Desktop на Qt 6 (в разработке)
+
+В [`apps/desktop-qt`](apps/desktop-qt/README.md) идёт переписывание Desktop на
+C++20 и Qt 6. Tauri-версия в `apps/desktop` остаётся, пока Qt-версия не догонит её
+по функциям.
+
+- Готово (фазы 0–4): интерфейс RU/EN с темами, USB-сканирование, выбор и установка
+  IPA, оффлайн-каталог твиков с локальными XML-черновиками, вкладка «Канал»
+  (detect и backup с явным согласием).
+- Не готово: подпись через Apple Account (вкладка «Подпись» пока заглушка,
+  isideload есть только в Tauri-версии), restore и UI для plan/merge.
+- Для backup на iOS 15.8.8 нужен `idevicebackup2` 1.4.0 или новее: с 1.3.0
+  бэкап падает на обмене версией протокола.
+
+Сборка и запуск: [apps/desktop-qt/README.md](apps/desktop-qt/README.md).
 
 ## Сайт
 
