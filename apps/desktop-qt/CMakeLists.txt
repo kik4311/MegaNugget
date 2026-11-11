@@ -13,6 +13,8 @@ add_executable(meganugget-desktop-qt
   src/main.cpp
   src/MainWindow.cpp
   src/MainWindow.h
+  src/ApplyChannelCli.cpp
+  src/ApplyChannelCli.h
   src/DeviceScanner.cpp
   src/DeviceScanner.h
   src/Compatibility.cpp
@@ -42,3 +44,17 @@ if(WIN32)
 endif()
 
 install(TARGETS meganugget-desktop-qt RUNTIME DESTINATION bin)
+
+option(MEGANUGGET_QT_TESTS "Build Qt unit tests" ON)
+if(MEGANUGGET_QT_TESTS)
+  enable_testing()
+  find_package(Qt6 REQUIRED COMPONENTS Test)
+  add_executable(apply-channel-cli-test
+    tests/ApplyChannelCli_test.cpp
+    src/ApplyChannelCli.cpp
+    src/ApplyChannelCli.h
+  )
+  target_include_directories(apply-channel-cli-test PRIVATE src)
+  target_link_libraries(apply-channel-cli-test PRIVATE Qt6::Test)
+  add_test(NAME apply-channel-cli-test COMMAND apply-channel-cli-test)
+endif()

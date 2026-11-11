@@ -44,6 +44,29 @@ jobs:
       - name: Compile native desktop (no signing, no bundle)
         run: npm run tauri build -- --no-bundle
         working-directory: apps/desktop
+  desktop-qt:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Qt 6 and build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake ninja-build g++ \
+            qt6-base-dev qt6-base-dev-tools
+      - run: cargo build -p apply-channel --locked
+      - run: |
+          cmake -S apps/desktop-qt -B apps/desktop-qt/build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER=g++
+          cmake --build apps/desktop-qt/build
+          ctest --test-dir apps/desktop-qt/build --output-on-failure
+      - name: Smoke (binary resolves apply-channel)
+        run: |
+          cp target/debug/apply-channel apps/desktop-qt/build/
+          test -x apps/desktop-qt/build/meganugget-desktop-qt
   ios:
     runs-on: macos-15
     timeout-minutes: 30

@@ -19,6 +19,20 @@ enum class JournalEvent {
   BackupStarted,
   BackupFinished,
   BackupFailed,
+  ChannelPlanStarted,
+  ChannelPlanFinished,
+  ChannelPlanFailed,
+  ChannelMergeStarted,
+  ChannelMergeFinished,
+  ChannelMergeFailed,
+  ChannelRestoreStarted,
+  ChannelRestoreFinished,
+  ChannelRestoreFailed,
+  ChannelEffectStarted,
+  ChannelEffectFinished,
+  ChannelEffectFailed,
+  ChannelVerifyFinished,
+  ChannelVerifyFailed,
 };
 
 struct JournalEntry {

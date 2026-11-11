@@ -46,7 +46,7 @@
 | 2 | `plan`: слияние draft ↔ backup (bplist diff, checksum Manifest) | реализовано; **реальный план построен** на живом backup (checksum OK, `add_key`) |
 | 3a | `apply`: merge draft в копию (`apply`, hardlink-копия, патч манифеста копии) + `effect` | реализовано; **реальный merge выполнен** в копию-соседа |
 | 3b | `restore`: единственная запись на устройство, двойной consent | реализовано в коде; **на устройство ещё не запускалось** (ждёт отдельного явного согласия) |
-| 4 | Desktop UI + журнал-события (`backup_started`…) | не начат |
+| 4 | Desktop UI + журнал-события (`backup_started`…) | **в Qt (apps/desktop-qt)**: detect, backup, verify, plan, merge (`apply`), restore (2-й consent), effect; журнал `channel_*`; **restore/effect на устройстве ещё не подтверждены** |
 
 ## CLI прототипа (`crates/apply-channel`)
 

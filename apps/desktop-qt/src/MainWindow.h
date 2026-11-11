@@ -46,6 +46,15 @@ class MainWindow final : public QMainWindow {
   void onChooseBackupDir();
   void onStartBackup();
   void onBackupFinished(int exitCode, QProcess::ExitStatus status);
+  void onChooseVerifiedBackup();
+  void onVerifyVerifiedBackup();
+  void onRunPlan();
+  void onChooseAppliedDir();
+  void onRunMerge();
+  void onRunRestore();
+  void onRestoreFinished(int exitCode, QProcess::ExitStatus status);
+  void onChoosePostBackup();
+  void onRunEffect();
 
  private:
   enum class Locale { Ru, En };
@@ -61,6 +70,12 @@ class MainWindow final : public QMainWindow {
   void clearIpa();
   [[nodiscard]] std::optional<QString> selectedUdid() const;
   [[nodiscard]] TweakDevice currentTweakDevice() const;
+  void appendApplyLog(const QString& line);
+  [[nodiscard]] bool ensureApplyChannelTool(QString* message) const;
+  [[nodiscard]] std::optional<QString> writeDraftToTemp(QString* error) const;
+  [[nodiscard]] QString formatPlanJson(const QByteArray& json) const;
+  [[nodiscard]] QString formatEffectJson(const QByteArray& json) const;
+  void stopRestoreProcess();
 
   Locale locale_ = Locale::Ru;
   Theme theme_ = Theme::Dark;
@@ -71,6 +86,11 @@ class MainWindow final : public QMainWindow {
   bool candidatesOnly_ = false;
   QString backupDir_;
   QString backupUdid_;
+  QString verifiedBackupDir_;
+  QString appliedDir_;
+  QString postBackupDir_;
+  QString draftPath_;
+  QString planOutPath_;
 
   QLabel* brand_ = nullptr;
   QLabel* subtitle_ = nullptr;
@@ -98,8 +118,26 @@ class MainWindow final : public QMainWindow {
   QPushButton* chooseBackupDirButton_ = nullptr;
   QCheckBox* backupConsentBox_ = nullptr;
   QPushButton* backupButton_ = nullptr;
+
+  QLineEdit* verifiedBackupEdit_ = nullptr;
+  QPushButton* chooseVerifiedBackupButton_ = nullptr;
+  QPushButton* verifyBackupButton_ = nullptr;
+  QPushButton* planButton_ = nullptr;
+
+  QLineEdit* appliedDirEdit_ = nullptr;
+  QPushButton* chooseAppliedDirButton_ = nullptr;
+  QPushButton* mergeButton_ = nullptr;
+
+  QCheckBox* restoreConsentBox_ = nullptr;
+  QPushButton* restoreButton_ = nullptr;
+
+  QLineEdit* postBackupEdit_ = nullptr;
+  QPushButton* choosePostBackupButton_ = nullptr;
+  QPushButton* effectButton_ = nullptr;
+
   QTextEdit* applyLog_ = nullptr;
   QProcess* backupProcess_ = nullptr;
+  QProcess* restoreProcess_ = nullptr;
 
   QLabel* signingLabel_ = nullptr;
 

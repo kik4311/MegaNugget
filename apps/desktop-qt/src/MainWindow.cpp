@@ -1,19 +1,26 @@
 #include "MainWindow.h"
 
+#include "ApplyChannelCli.h"
 #include "CliRunner.h"
 
 #include <QCheckBox>
 #include <QComboBox>
 #include <QFile>
+#include <QDir>
 #include <QFileDialog>
 #include <QHBoxLayout>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QSettings>
+#include <QStandardPaths>
 #include <QTabWidget>
+#include <QTemporaryFile>
 #include <QTextEdit>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -134,6 +141,44 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
   applyLayout->addWidget(backupConsentBox_);
   backupButton_ = new QPushButton(this);
   applyLayout->addWidget(backupButton_);
+
+  auto* verifiedRow = new QHBoxLayout();
+  verifiedBackupEdit_ = new QLineEdit(this);
+  verifiedBackupEdit_->setReadOnly(true);
+  chooseVerifiedBackupButton_ = new QPushButton(this);
+  verifyBackupButton_ = new QPushButton(this);
+  verifiedRow->addWidget(verifiedBackupEdit_, 1);
+  verifiedRow->addWidget(chooseVerifiedBackupButton_);
+  verifiedRow->addWidget(verifyBackupButton_);
+  applyLayout->addLayout(verifiedRow);
+  planButton_ = new QPushButton(this);
+  applyLayout->addWidget(planButton_);
+
+  auto* appliedRow = new QHBoxLayout();
+  appliedDirEdit_ = new QLineEdit(this);
+  appliedDirEdit_->setReadOnly(true);
+  chooseAppliedDirButton_ = new QPushButton(this);
+  mergeButton_ = new QPushButton(this);
+  appliedRow->addWidget(appliedDirEdit_, 1);
+  appliedRow->addWidget(chooseAppliedDirButton_);
+  appliedRow->addWidget(mergeButton_);
+  applyLayout->addLayout(appliedRow);
+
+  restoreConsentBox_ = new QCheckBox(this);
+  applyLayout->addWidget(restoreConsentBox_);
+  restoreButton_ = new QPushButton(this);
+  applyLayout->addWidget(restoreButton_);
+
+  auto* postRow = new QHBoxLayout();
+  postBackupEdit_ = new QLineEdit(this);
+  postBackupEdit_->setReadOnly(true);
+  choosePostBackupButton_ = new QPushButton(this);
+  effectButton_ = new QPushButton(this);
+  postRow->addWidget(postBackupEdit_, 1);
+  postRow->addWidget(choosePostBackupButton_);
+  postRow->addWidget(effectButton_);
+  applyLayout->addLayout(postRow);
+
   applyLog_ = new QTextEdit(this);
   applyLog_->setReadOnly(true);
   applyLayout->addWidget(applyLog_, 1);
@@ -162,6 +207,15 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
   connect(applyDetectButton_, &QPushButton::clicked, this, &MainWindow::onApplyDetect);
   connect(chooseBackupDirButton_, &QPushButton::clicked, this, &MainWindow::onChooseBackupDir);
   connect(backupButton_, &QPushButton::clicked, this, &MainWindow::onStartBackup);
+  connect(chooseVerifiedBackupButton_, &QPushButton::clicked, this,
+          &MainWindow::onChooseVerifiedBackup);
+  connect(verifyBackupButton_, &QPushButton::clicked, this, &MainWindow::onVerifyVerifiedBackup);
+  connect(planButton_, &QPushButton::clicked, this, &MainWindow::onRunPlan);
+  connect(chooseAppliedDirButton_, &QPushButton::clicked, this, &MainWindow::onChooseAppliedDir);
+  connect(mergeButton_, &QPushButton::clicked, this, &MainWindow::onRunMerge);
+  connect(restoreButton_, &QPushButton::clicked, this, &MainWindow::onRunRestore);
+  connect(choosePostBackupButton_, &QPushButton::clicked, this, &MainWindow::onChoosePostBackup);
+  connect(effectButton_, &QPushButton::clicked, this, &MainWindow::onRunEffect);
 
   QString catalogError;
   if (!TweakCatalog::instance().load(&catalogError)) {
@@ -181,6 +235,7 @@ MainWindow::~MainWindow() {
     backupProcess_->kill();
     backupProcess_->waitForFinished(3000);
   }
+  stopRestoreProcess();
   clearIpa();
 }
 
@@ -262,9 +317,27 @@ void MainWindow::refreshChrome() {
       trRuEn(QStringLiteral("Запустить backup"), QStringLiteral("Start backup")));
   applyStatus_->setText(trRuEn(
       QStringLiteral(
-          "Apply channel: только iPhone9,1/9,3 + 15.8.8. Restore пока не из UI."),
+          "Канал: iPhone9,1/9,3 + iOS 15.8.8. План → merge → restore (2-й consent) → effect."),
       QStringLiteral(
-          "Apply channel: iPhone9,1/9,3 + 15.8.8 only. Restore is not in the UI yet.")));
+          "Channel: iPhone9,1/9,3 + iOS 15.8.8. Plan → merge → restore (2nd consent) → effect.")));
+  chooseVerifiedBackupButton_->setText(
+      trRuEn(QStringLiteral("Проверенный backup"), QStringLiteral("Verified backup")));
+  verifyBackupButton_->setText(trRuEn(QStringLiteral("Verify"), QStringLiteral("Verify")));
+  planButton_->setText(
+      trRuEn(QStringLiteral("План (SBHideLowPowerAlerts)"), QStringLiteral("Plan (SBHideLowPowerAlerts)")));
+  chooseAppliedDirButton_->setText(
+      trRuEn(QStringLiteral("Папка merge"), QStringLiteral("Merge folder")));
+  mergeButton_->setText(trRuEn(QStringLiteral("Merge (apply)"), QStringLiteral("Merge (apply)")));
+  restoreConsentBox_->setText(trRuEn(
+      QStringLiteral(
+          "Я согласен на restore на устройство — телефон перезагрузится (consent-restore)"),
+      QStringLiteral(
+          "I consent to restore onto the device — the phone will reboot (consent-restore)")));
+  restoreButton_->setText(
+      trRuEn(QStringLiteral("Restore на iPhone"), QStringLiteral("Restore to iPhone")));
+  choosePostBackupButton_->setText(
+      trRuEn(QStringLiteral("Post-backup"), QStringLiteral("Post-backup")));
+  effectButton_->setText(trRuEn(QStringLiteral("Effect (verify)"), QStringLiteral("Effect (verify)")));
   signingLabel_->setText(trRuEn(
       QStringLiteral(
           "Apple Account signing ещё не портирован на Qt/C++ (isideload остаётся в "
@@ -714,5 +787,413 @@ void MainWindow::onBackupFinished(int exitCode, QProcess::ExitStatus status) {
   applyLog_->setPlainText(
       QStringLiteral("udid=%1\nproduct=%2\nios=%3\nSnapshotState=%4")
           .arg(snap->udidMasked, snap->product, snap->ios, snap->snapshotState));
+  verifiedBackupDir_ = backupDir_;
+  verifiedBackupEdit_->setText(backupDir_);
+  appliedDir_ = ApplyChannelCli::suggestedAppliedDir(backupDir_);
+  appliedDirEdit_->setText(appliedDir_);
+  renderJournal();
+}
+
+void MainWindow::appendApplyLog(const QString& line) {
+  const QString prev = applyLog_->toPlainText().trimmed();
+  applyLog_->setPlainText(prev.isEmpty() ? line : prev + QLatin1Char('\n') + line);
+}
+
+bool MainWindow::ensureApplyChannelTool(QString* message) const {
+  QString detail;
+  const auto binary = ApplyChannelCli::resolveBinary(&detail);
+  if (!binary) {
+    if (message) {
+      *message = trRuEn(
+          QStringLiteral("apply-channel не найден. Соберите: cargo build -p apply-channel\n%1")
+              .arg(detail),
+          QStringLiteral("apply-channel not found. Build: cargo build -p apply-channel\n%1")
+              .arg(detail));
+    }
+    return false;
+  }
+  return true;
+}
+
+std::optional<QString> MainWindow::writeDraftToTemp(QString* error) const {
+  const QString cache =
+      QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+  QDir().mkpath(cache);
+  const QString path = QDir(cache).filePath(QStringLiteral("sb-hide-low-power-draft.json"));
+  QFile file(path);
+  if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+    if (error) {
+      *error = trRuEn(QStringLiteral("Не удалось записать draft."),
+                      QStringLiteral("Could not write draft."));
+    }
+    return std::nullopt;
+  }
+  file.write(ApplyChannelCli::hideLowPowerAlertsDraftJson().toUtf8());
+  return path;
+}
+
+QString MainWindow::formatPlanJson(const QByteArray& json) const {
+  QJsonParseError parseError;
+  const QJsonDocument doc = QJsonDocument::fromJson(json, &parseError);
+  if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
+    return QString::fromUtf8(json);
+  }
+  QStringList lines;
+  const QJsonObject root = doc.object();
+  const QJsonArray files = root.value(QStringLiteral("files")).toArray();
+  for (const QJsonValue& fileVal : files) {
+    const QJsonObject file = fileVal.toObject();
+      const QString rel = file.value(QStringLiteral("relative_path")).toString();
+    const bool digest = file.value(QStringLiteral("digest_verified")).toBool();
+    lines << QStringLiteral("file=%1 digest_verified=%2")
+                 .arg(rel, digest ? QStringLiteral("true") : QStringLiteral("false"));
+    const QJsonArray entries = file.value(QStringLiteral("entries")).toArray();
+    for (const QJsonValue& entryVal : entries) {
+      const QJsonObject entry = entryVal.toObject();
+      const QString key = entry.value(QStringLiteral("key")).toString();
+      const QString action = entry.value(QStringLiteral("action")).toString();
+      const QString oldV = entry.value(QStringLiteral("old")).toVariant().toString();
+      const QString newV = entry.value(QStringLiteral("new")).toString();
+      lines << QStringLiteral("  key=%1 action=%2 before=%3 after=%4")
+                   .arg(key, action, oldV.isEmpty() ? QStringLiteral("null") : oldV, newV);
+    }
+  }
+  return lines.isEmpty() ? QString::fromUtf8(json) : lines.join(QLatin1Char('\n'));
+}
+
+QString MainWindow::formatEffectJson(const QByteArray& json) const {
+  QJsonParseError parseError;
+  const QJsonDocument doc = QJsonDocument::fromJson(json, &parseError);
+  if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
+    return QString::fromUtf8(json);
+  }
+  QStringList lines;
+  const QJsonArray files = doc.object().value(QStringLiteral("files")).toArray();
+  for (const QJsonValue& fileVal : files) {
+    const QJsonArray keys = fileVal.toObject().value(QStringLiteral("keys")).toArray();
+    for (const QJsonValue& keyVal : keys) {
+      const QJsonObject key = keyVal.toObject();
+      lines << QStringLiteral("%1 · %2 · status=%3 · before=%4 · after=%5")
+                   .arg(key.value(QStringLiteral("id")).toString(),
+                        key.value(QStringLiteral("key")).toString(),
+                        key.value(QStringLiteral("status")).toString(),
+                        key.value(QStringLiteral("before"))
+                            .toVariant()
+                            .toString()
+                            .isEmpty()
+                            ? QStringLiteral("null")
+                            : key.value(QStringLiteral("before")).toVariant().toString(),
+                        key.value(QStringLiteral("after"))
+                            .toVariant()
+                            .toString()
+                            .isEmpty()
+                            ? QStringLiteral("null")
+                            : key.value(QStringLiteral("after")).toVariant().toString());
+    }
+  }
+  return lines.isEmpty() ? QString::fromUtf8(json) : lines.join(QLatin1Char('\n'));
+}
+
+void MainWindow::stopRestoreProcess() {
+  if (!restoreProcess_) {
+    return;
+  }
+  if (restoreProcess_->state() != QProcess::NotRunning) {
+    restoreProcess_->kill();
+    restoreProcess_->waitForFinished(3000);
+  }
+}
+
+void MainWindow::onChooseVerifiedBackup() {
+  const QString dir = QFileDialog::getExistingDirectory(
+      this, trRuEn(QStringLiteral("Проверенный backup"), QStringLiteral("Verified backup")));
+  if (dir.isEmpty()) {
+    return;
+  }
+  verifiedBackupDir_ = dir;
+  verifiedBackupEdit_->setText(dir);
+  if (appliedDir_.isEmpty()) {
+    appliedDir_ = ApplyChannelCli::suggestedAppliedDir(dir);
+    appliedDirEdit_->setText(appliedDir_);
+  }
+}
+
+void MainWindow::onVerifyVerifiedBackup() {
+  if (verifiedBackupDir_.isEmpty()) {
+    appendApplyLog(trRuEn(QStringLiteral("Выберите папку backup."),
+                          QStringLiteral("Choose a backup folder first.")));
+    return;
+  }
+  QString message;
+  if (!ensureApplyChannelTool(&message)) {
+    appendApplyLog(message);
+    journal_.record(JournalLevel::Error, JournalEvent::ChannelVerifyFailed);
+    renderJournal();
+    return;
+  }
+  const auto result =
+      ApplyChannelCli::run({QStringLiteral("verify"), QDir::toNativeSeparators(verifiedBackupDir_)});
+  if (!result.success) {
+    journal_.record(JournalLevel::Error, JournalEvent::ChannelVerifyFailed);
+    appendApplyLog(result.errorCode);
+    renderJournal();
+    return;
+  }
+  journal_.record(JournalLevel::Info, JournalEvent::ChannelVerifyFinished);
+  appendApplyLog(QString::fromUtf8(result.stdoutJson));
+  renderJournal();
+}
+
+void MainWindow::onRunPlan() {
+  if (verifiedBackupDir_.isEmpty()) {
+    appendApplyLog(trRuEn(QStringLiteral("Выберите проверенный backup."),
+                          QStringLiteral("Choose a verified backup first.")));
+    return;
+  }
+  QString toolMessage;
+  if (!ensureApplyChannelTool(&toolMessage)) {
+    appendApplyLog(toolMessage);
+    journal_.record(JournalLevel::Error, JournalEvent::ChannelPlanFailed);
+    renderJournal();
+    return;
+  }
+  QString draftError;
+  const auto draftPath = writeDraftToTemp(&draftError);
+  if (!draftPath) {
+    appendApplyLog(draftError);
+    journal_.record(JournalLevel::Error, JournalEvent::ChannelPlanFailed);
+    renderJournal();
+    return;
+  }
+  draftPath_ = *draftPath;
+  const QString cache =
+      QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+  planOutPath_ = QDir(cache).filePath(QStringLiteral("plan-report.json"));
+  if (QFile::exists(planOutPath_)) {
+    QFile::remove(planOutPath_);
+  }
+
+  journal_.record(JournalLevel::Info, JournalEvent::ChannelPlanStarted);
+  renderJournal();
+  const auto result = ApplyChannelCli::run(
+      ApplyChannelCli::planArgs(verifiedBackupDir_, draftPath_, planOutPath_));
+  if (!result.success) {
+    journal_.record(JournalLevel::Error, JournalEvent::ChannelPlanFailed);
+    appendApplyLog(QStringLiteral("plan: %1").arg(result.errorCode));
+    renderJournal();
+    return;
+  }
+  journal_.record(JournalLevel::Info, JournalEvent::ChannelPlanFinished);
+  appendApplyLog(trRuEn(QStringLiteral("План OK:"), QStringLiteral("Plan OK:")));
+  appendApplyLog(formatPlanJson(result.stdoutJson));
+  renderJournal();
+}
+
+void MainWindow::onChooseAppliedDir() {
+  const QString dir = QFileDialog::getExistingDirectory(
+      this,
+      trRuEn(QStringLiteral("Папка merged backup"), QStringLiteral("Merged backup folder")));
+  if (dir.isEmpty()) {
+    return;
+  }
+  appliedDir_ = dir;
+  appliedDirEdit_->setText(dir);
+}
+
+void MainWindow::onRunMerge() {
+  if (verifiedBackupDir_.isEmpty()) {
+    appendApplyLog(trRuEn(QStringLiteral("Нужен проверенный backup."),
+                          QStringLiteral("A verified backup is required.")));
+    return;
+  }
+  if (appliedDir_.isEmpty()) {
+    appliedDir_ = ApplyChannelCli::suggestedAppliedDir(verifiedBackupDir_);
+    appliedDirEdit_->setText(appliedDir_);
+  }
+  if (QFileInfo::exists(appliedDir_)) {
+    appendApplyLog(QStringLiteral("merge_output_exists"));
+    journal_.record(JournalLevel::Error, JournalEvent::ChannelMergeFailed);
+    renderJournal();
+    return;
+  }
+  QString toolMessage;
+  if (!ensureApplyChannelTool(&toolMessage)) {
+    appendApplyLog(toolMessage);
+    journal_.record(JournalLevel::Error, JournalEvent::ChannelMergeFailed);
+    renderJournal();
+    return;
+  }
+  QString draftError;
+  const auto draftPath = draftPath_.isEmpty() ? writeDraftToTemp(&draftError) : std::optional(draftPath_);
+  if (!draftPath) {
+    appendApplyLog(draftError);
+    journal_.record(JournalLevel::Error, JournalEvent::ChannelMergeFailed);
+    renderJournal();
+    return;
+  }
+  journal_.record(JournalLevel::Info, JournalEvent::ChannelMergeStarted);
+  renderJournal();
+  const auto result = ApplyChannelCli::run(
+      ApplyChannelCli::applyArgs(verifiedBackupDir_, *draftPath, appliedDir_), 600000);
+  if (!result.success) {
+    journal_.record(JournalLevel::Error, JournalEvent::ChannelMergeFailed);
+    appendApplyLog(QStringLiteral("apply: %1").arg(result.errorCode));
+    renderJournal();
+    return;
+  }
+  journal_.record(JournalLevel::Info, JournalEvent::ChannelMergeFinished);
+  appendApplyLog(trRuEn(QStringLiteral("Merge OK:"), QStringLiteral("Merge OK:")));
+  appendApplyLog(QString::fromUtf8(result.stdoutJson));
+  renderJournal();
+}
+
+void MainWindow::onRunRestore() {
+  if (!restoreConsentBox_->isChecked()) {
+    appendApplyLog(QStringLiteral("restore_requires_consent"));
+    return;
+  }
+  if (appliedDir_.isEmpty() || !QFileInfo::exists(appliedDir_)) {
+    appendApplyLog(trRuEn(QStringLiteral("Сначала выполните merge в новую папку."),
+                          QStringLiteral("Run merge into a new folder first.")));
+    return;
+  }
+  ApplyError error = ApplyError::DeviceNotFound;
+  const auto udid = ApplyChannel::singleTargetUdid(&error);
+  if (!udid) {
+    appendApplyLog(ApplyChannel::errorCode(error));
+    journal_.record(JournalLevel::Error, JournalEvent::ChannelRestoreFailed);
+    renderJournal();
+    return;
+  }
+
+  const auto reply = QMessageBox::warning(
+      this, QStringLiteral("MegaNugget"),
+      trRuEn(QStringLiteral(
+                 "Restore запишет merged backup на устройство %1 и перезагрузит iPhone. "
+                 "Будет восстановлена копия с SBHideLowPowerAlerts=true. Продолжить?")
+                 .arg(DeviceScanner::maskUdid(*udid)),
+             QStringLiteral(
+                 "Restore will write the merged backup to device %1 and reboot the iPhone. "
+                 "The copy includes SBHideLowPowerAlerts=true. Continue?")
+                 .arg(DeviceScanner::maskUdid(*udid))),
+      QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+  if (reply != QMessageBox::Yes) {
+    return;
+  }
+
+  QString toolMessage;
+  if (!ensureApplyChannelTool(&toolMessage)) {
+    appendApplyLog(toolMessage);
+    journal_.record(JournalLevel::Error, JournalEvent::ChannelRestoreFailed);
+    renderJournal();
+    return;
+  }
+  const auto binary = ApplyChannelCli::resolveBinary();
+  if (!binary) {
+    appendApplyLog(QStringLiteral("apply_channel_missing"));
+    return;
+  }
+
+  if (restoreProcess_ && restoreProcess_->state() != QProcess::NotRunning) {
+    appendApplyLog(trRuEn(QStringLiteral("Restore уже выполняется."),
+                          QStringLiteral("Restore is already running.")));
+    return;
+  }
+
+  if (!restoreProcess_) {
+    restoreProcess_ = new QProcess(this);
+    connect(restoreProcess_,
+            QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
+            &MainWindow::onRestoreFinished);
+  }
+
+  restoreProcess_->setProgram(*binary);
+  restoreProcess_->setArguments(ApplyChannelCli::restoreArgs(appliedDir_));
+  journal_.record(JournalLevel::Info, JournalEvent::ChannelRestoreStarted);
+  renderJournal();
+  appendApplyLog(trRuEn(QStringLiteral("Restore запущен для %1… Не отключайте USB.")
+                            .arg(DeviceScanner::maskUdid(*udid)),
+                        QStringLiteral("Restore started for %1… Keep USB connected.")
+                            .arg(DeviceScanner::maskUdid(*udid))));
+  restoreButton_->setEnabled(false);
+  restoreConsentBox_->setEnabled(false);
+  restoreProcess_->start();
+  if (!restoreProcess_->waitForStarted(5000)) {
+    restoreButton_->setEnabled(true);
+    restoreConsentBox_->setEnabled(true);
+    journal_.record(JournalLevel::Error, JournalEvent::ChannelRestoreFailed);
+    appendApplyLog(QStringLiteral("restore_tool_missing"));
+    renderJournal();
+  }
+}
+
+void MainWindow::onRestoreFinished(int exitCode, QProcess::ExitStatus status) {
+  restoreButton_->setEnabled(true);
+  restoreConsentBox_->setEnabled(true);
+  const QByteArray out = restoreProcess_ ? restoreProcess_->readAllStandardOutput() : QByteArray();
+  const QByteArray err = restoreProcess_ ? restoreProcess_->readAllStandardError() : QByteArray();
+  if (status != QProcess::NormalExit || exitCode != 0) {
+    journal_.record(JournalLevel::Error, JournalEvent::ChannelRestoreFailed);
+    QString code = ApplyChannelCli::parseErrorFromStderr(err);
+    if (code.isEmpty()) {
+      code = QStringLiteral("restore_failed");
+    }
+    appendApplyLog(QStringLiteral("restore: %1 (exit=%2)").arg(code).arg(exitCode));
+    renderJournal();
+    return;
+  }
+  journal_.record(JournalLevel::Info, JournalEvent::ChannelRestoreFinished);
+  appendApplyLog(trRuEn(QStringLiteral("Restore завершён. Сделайте новый backup и запустите Effect."),
+                        QStringLiteral("Restore finished. Take a fresh backup and run Effect.")));
+  if (!out.isEmpty()) {
+    appendApplyLog(QString::fromUtf8(out));
+  }
+  renderJournal();
+}
+
+void MainWindow::onChoosePostBackup() {
+  const QString dir = QFileDialog::getExistingDirectory(
+      this, trRuEn(QStringLiteral("Post-restore backup"), QStringLiteral("Post-restore backup")));
+  if (dir.isEmpty()) {
+    return;
+  }
+  postBackupDir_ = dir;
+  postBackupEdit_->setText(dir);
+}
+
+void MainWindow::onRunEffect() {
+  if (verifiedBackupDir_.isEmpty() || postBackupDir_.isEmpty()) {
+    appendApplyLog(trRuEn(QStringLiteral("Нужны pre-backup (verified) и post-backup."),
+                          QStringLiteral("Need pre-backup (verified) and post-backup.")));
+    return;
+  }
+  QString toolMessage;
+  if (!ensureApplyChannelTool(&toolMessage)) {
+    appendApplyLog(toolMessage);
+    journal_.record(JournalLevel::Error, JournalEvent::ChannelEffectFailed);
+    renderJournal();
+    return;
+  }
+  QString draftError;
+  const auto draftPath = draftPath_.isEmpty() ? writeDraftToTemp(&draftError) : std::optional(draftPath_);
+  if (!draftPath) {
+    appendApplyLog(draftError);
+    journal_.record(JournalLevel::Error, JournalEvent::ChannelEffectFailed);
+    renderJournal();
+    return;
+  }
+  journal_.record(JournalLevel::Info, JournalEvent::ChannelEffectStarted);
+  renderJournal();
+  const auto result = ApplyChannelCli::run(
+      ApplyChannelCli::effectArgs(*draftPath, verifiedBackupDir_, postBackupDir_), 120000);
+  if (!result.success) {
+    journal_.record(JournalLevel::Error, JournalEvent::ChannelEffectFailed);
+    appendApplyLog(QStringLiteral("effect: %1").arg(result.errorCode));
+    renderJournal();
+    return;
+  }
+  journal_.record(JournalLevel::Info, JournalEvent::ChannelEffectFinished);
+  appendApplyLog(trRuEn(QStringLiteral("Effect:"), QStringLiteral("Effect:")));
+  appendApplyLog(formatEffectJson(result.stdoutJson));
   renderJournal();
 }

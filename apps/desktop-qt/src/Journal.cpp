@@ -46,6 +46,34 @@ QString Journal::eventCode(JournalEvent event) {
       return QStringLiteral("backup_finished");
     case JournalEvent::BackupFailed:
       return QStringLiteral("backup_failed");
+    case JournalEvent::ChannelPlanStarted:
+      return QStringLiteral("channel_plan_started");
+    case JournalEvent::ChannelPlanFinished:
+      return QStringLiteral("channel_plan_finished");
+    case JournalEvent::ChannelPlanFailed:
+      return QStringLiteral("channel_plan_failed");
+    case JournalEvent::ChannelMergeStarted:
+      return QStringLiteral("channel_merge_started");
+    case JournalEvent::ChannelMergeFinished:
+      return QStringLiteral("channel_merge_finished");
+    case JournalEvent::ChannelMergeFailed:
+      return QStringLiteral("channel_merge_failed");
+    case JournalEvent::ChannelRestoreStarted:
+      return QStringLiteral("channel_restore_started");
+    case JournalEvent::ChannelRestoreFinished:
+      return QStringLiteral("channel_restore_finished");
+    case JournalEvent::ChannelRestoreFailed:
+      return QStringLiteral("channel_restore_failed");
+    case JournalEvent::ChannelEffectStarted:
+      return QStringLiteral("channel_effect_started");
+    case JournalEvent::ChannelEffectFinished:
+      return QStringLiteral("channel_effect_finished");
+    case JournalEvent::ChannelEffectFailed:
+      return QStringLiteral("channel_effect_failed");
+    case JournalEvent::ChannelVerifyFinished:
+      return QStringLiteral("channel_verify_finished");
+    case JournalEvent::ChannelVerifyFailed:
+      return QStringLiteral("channel_verify_failed");
   }
   return QStringLiteral("unknown");
 }
