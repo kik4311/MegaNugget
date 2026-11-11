@@ -12,7 +12,7 @@ The existing `apps/desktop` Tauri app remains until feature parity.
 
 ## `apply-channel` binary
 
-The **Канал / Apply** tab shells out to `apply-channel` (crate `crates/apply-channel`). It must be on disk before plan/merge/restore/effect run.
+The **Применение / Apply** tab shells out to `apply-channel` (crate `crates/apply-channel`). It must be on disk before plan/merge/restore/effect run.
 
 Resolve order (first hit wins):
 

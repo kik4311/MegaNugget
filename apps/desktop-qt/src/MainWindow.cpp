@@ -225,8 +225,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
   applyTheme();
   refreshChrome();
   statusLabel_->setText(
-      trRuEn(QStringLiteral("Подключите iPhone по USB и нажмите «Сканировать»."),
-             QStringLiteral("Connect an iPhone over USB and press Scan.")));
+      trRuEn(QStringLiteral("Подключите iPhone по USB и нажмите «Найти iPhone»."),
+             QStringLiteral("Connect an iPhone over USB and press Find iPhone.")));
   renderTweaks();
 }
 
@@ -285,66 +285,69 @@ void MainWindow::applyTheme() {
 void MainWindow::refreshChrome() {
   subtitle_->setText(trRuEn(
       QStringLiteral(
-          "Кастомизация старых iOS без jailbreak. Desktop на Qt 6 (фаза 0–4)."),
+          "Твики для старых iPhone без джейлбрейка."),
       QStringLiteral(
-          "Old-iOS customization without jailbreak. Qt 6 desktop (phase 0–4).")));
+          "Tweaks for older iPhones without a jailbreak.")));
   themeBox_->setItemText(0, trRuEn(QStringLiteral("Тёмная"), QStringLiteral("Dark")));
   themeBox_->setItemText(1, trRuEn(QStringLiteral("Светлая"), QStringLiteral("Light")));
   tabs_->setTabText(0, trRuEn(QStringLiteral("Устройства"), QStringLiteral("Devices")));
   tabs_->setTabText(1, trRuEn(QStringLiteral("Твики"), QStringLiteral("Tweaks")));
-  tabs_->setTabText(2, trRuEn(QStringLiteral("Канал"), QStringLiteral("Apply")));
+  tabs_->setTabText(2, trRuEn(QStringLiteral("Применение"), QStringLiteral("Apply")));
   tabs_->setTabText(3, trRuEn(QStringLiteral("Подпись"), QStringLiteral("Signing")));
-  scanButton_->setText(trRuEn(QStringLiteral("Сканировать"), QStringLiteral("Scan")));
+  scanButton_->setText(trRuEn(QStringLiteral("Найти iPhone"), QStringLiteral("Find iPhone")));
   exportButton_->setText(
       trRuEn(QStringLiteral("Экспорт журнала"), QStringLiteral("Export journal")));
   chooseIpaButton_->setText(
       trRuEn(QStringLiteral("Выбрать IPA"), QStringLiteral("Choose IPA")));
   installButton_->setText(trRuEn(QStringLiteral("Установить"), QStringLiteral("Install")));
   tweakFilter_->setPlaceholderText(
-      trRuEn(QStringLiteral("Поиск по названию/id"), QStringLiteral("Search title/id")));
+      trRuEn(QStringLiteral("Поиск твика"), QStringLiteral("Search tweaks")));
   candidatesOnlyBox_->setText(
       trRuEn(QStringLiteral("Только кандидаты"), QStringLiteral("Candidates only")));
   compileButton_->setText(
-      trRuEn(QStringLiteral("Скомпилировать черновик"), QStringLiteral("Compile draft")));
+      trRuEn(QStringLiteral("Собрать черновик"), QStringLiteral("Build draft")));
   applyDetectButton_->setText(
-      trRuEn(QStringLiteral("Detect (цель)"), QStringLiteral("Detect (target)")));
+      trRuEn(QStringLiteral("Проверить iPhone"), QStringLiteral("Check iPhone")));
   chooseBackupDirButton_->setText(
-      trRuEn(QStringLiteral("Папка backup"), QStringLiteral("Backup folder")));
+      trRuEn(QStringLiteral("Папка для копии"), QStringLiteral("Backup folder")));
   backupConsentBox_->setText(trRuEn(
-      QStringLiteral("Я согласен создать полный локальный backup (consent)"),
-      QStringLiteral("I consent to create a full local backup")));
+      QStringLiteral("Я согласен создать полную резервную копию iPhone на этом компьютере"),
+      QStringLiteral("I agree to create a full backup of the iPhone on this computer")));
   backupButton_->setText(
-      trRuEn(QStringLiteral("Запустить backup"), QStringLiteral("Start backup")));
+      trRuEn(QStringLiteral("Создать резервную копию"), QStringLiteral("Create backup")));
   applyStatus_->setText(trRuEn(
       QStringLiteral(
-          "Канал: iPhone9,1/9,3 + iOS 15.8.8. План → merge → restore (2-й consent) → effect."),
+          "Для iPhone 7 на iOS 15.8.8. Шаги: проверка копии, план, добавление твика в копию, "
+          "восстановление на iPhone (с отдельным согласием) и проверка результата."),
       QStringLiteral(
-          "Channel: iPhone9,1/9,3 + iOS 15.8.8. Plan → merge → restore (2nd consent) → effect.")));
+          "For iPhone 7 on iOS 15.8.8. Steps: check the backup, plan, add the tweak to the copy, "
+          "restore to the iPhone (with a separate consent) and check the result.")));
   chooseVerifiedBackupButton_->setText(
-      trRuEn(QStringLiteral("Проверенный backup"), QStringLiteral("Verified backup")));
-  verifyBackupButton_->setText(trRuEn(QStringLiteral("Verify"), QStringLiteral("Verify")));
+      trRuEn(QStringLiteral("Выбрать копию"), QStringLiteral("Choose backup")));
+  verifyBackupButton_->setText(trRuEn(QStringLiteral("Проверить копию"), QStringLiteral("Check backup")));
   planButton_->setText(
-      trRuEn(QStringLiteral("План (SBHideLowPowerAlerts)"), QStringLiteral("Plan (SBHideLowPowerAlerts)")));
+      trRuEn(QStringLiteral("План: без предупреждений о низком заряде"),
+             QStringLiteral("Plan: no low battery alerts")));
   chooseAppliedDirButton_->setText(
-      trRuEn(QStringLiteral("Папка merge"), QStringLiteral("Merge folder")));
-  mergeButton_->setText(trRuEn(QStringLiteral("Merge (apply)"), QStringLiteral("Merge (apply)")));
+      trRuEn(QStringLiteral("Папка для новой копии"), QStringLiteral("Folder for new copy")));
+  mergeButton_->setText(trRuEn(QStringLiteral("Добавить твик в копию"), QStringLiteral("Add tweak to copy")));
   restoreConsentBox_->setText(trRuEn(
       QStringLiteral(
-          "Я согласен на restore на устройство — телефон перезагрузится (consent-restore)"),
+          "Я согласен восстановить копию на iPhone. Телефон перезагрузится."),
       QStringLiteral(
-          "I consent to restore onto the device — the phone will reboot (consent-restore)")));
+          "I agree to restore the copy to the iPhone. The phone will reboot.")));
   restoreButton_->setText(
-      trRuEn(QStringLiteral("Restore на iPhone"), QStringLiteral("Restore to iPhone")));
+      trRuEn(QStringLiteral("Восстановить на iPhone"), QStringLiteral("Restore to iPhone")));
   choosePostBackupButton_->setText(
-      trRuEn(QStringLiteral("Post-backup"), QStringLiteral("Post-backup")));
-  effectButton_->setText(trRuEn(QStringLiteral("Effect (verify)"), QStringLiteral("Effect (verify)")));
+      trRuEn(QStringLiteral("Копия после восстановления"), QStringLiteral("Backup after restore")));
+  effectButton_->setText(trRuEn(QStringLiteral("Проверить результат"), QStringLiteral("Check result")));
   signingLabel_->setText(trRuEn(
       QStringLiteral(
-          "Apple Account signing ещё не портирован на Qt/C++ (isideload остаётся в "
-          "Rust/Tauri Desktop). Здесь заглушка фазы 4 — без сети и без ввода пароля."),
+          "Подпись через Apple Account в этой версии пока не работает: она есть только "
+          "в версии на Tauri. Здесь ничего не отправляется в сеть и пароль не запрашивается."),
       QStringLiteral(
-          "Apple Account signing is not ported to Qt/C++ yet (isideload remains in "
-          "the Rust/Tauri Desktop). This is a phase-4 stub — no network, no password UI.")));
+          "Signing with an Apple Account does not work in this version yet: it is only in "
+          "the Tauri version. Nothing is sent over the network and no password is asked.")));
   renderScan();
   renderIpa();
   renderTweaks();
@@ -454,9 +457,9 @@ void MainWindow::onInstallIpa() {
   }
   const auto reply = QMessageBox::question(
       this, QStringLiteral("MegaNugget"),
-      trRuEn(QStringLiteral("Установить %1 (build %2) на устройство %3?")
+      trRuEn(QStringLiteral("Установить %1 (версия %2) на iPhone %3?")
                  .arg(ipa_->info.bundleId, ipa_->info.version, DeviceScanner::maskUdid(*udid)),
-             QStringLiteral("Install %1 (build %2) on device %3?")
+             QStringLiteral("Install %1 (version %2) on iPhone %3?")
                  .arg(ipa_->info.bundleId, ipa_->info.version, DeviceScanner::maskUdid(*udid))));
   if (reply != QMessageBox::Yes) {
     return;
@@ -531,10 +534,10 @@ void MainWindow::onCompileDraft() {
     return;
   }
   journal_.record(JournalLevel::Info, JournalEvent::DraftCompiled);
-  QString text = trRuEn(QStringLiteral("Файлов: %1 · selected=%2 · applied_to_device=false\n\n")
+  QString text = trRuEn(QStringLiteral("Файлов: %1 · выбрано твиков: %2 · на iPhone не применено\n\n")
                             .arg(preview->files.size())
                             .arg(preview->selectedCount),
-                        QStringLiteral("Files: %1 · selected=%2 · applied_to_device=false\n\n")
+                        QStringLiteral("Files: %1 · tweaks selected: %2 · not applied to the iPhone\n\n")
                             .arg(preview->files.size())
                             .arg(preview->selectedCount));
   for (const auto& file : preview->files) {
@@ -558,28 +561,28 @@ void MainWindow::renderScan() {
   deviceList_->clear();
   if (scan_.failure) {
     statusLabel_->setText(trRuEn(
-        QStringLiteral("Скан не удался: %1").arg(CliRunner::failureCode(*scan_.failure)),
+        QStringLiteral("Поиск не удался: %1").arg(CliRunner::failureCode(*scan_.failure)),
         QStringLiteral("Scan failed: %1").arg(CliRunner::failureCode(*scan_.failure))));
     return;
   }
   if (scan_.devices.isEmpty()) {
     statusLabel_->setText(trRuEn(
-        QStringLiteral("Устройства не найдены (USB)."),
-        QStringLiteral("No devices found (USB).")));
+        QStringLiteral("iPhone не найден. Проверьте USB-кабель."),
+        QStringLiteral("No iPhone found. Check the USB cable.")));
     return;
   }
-  statusLabel_->setText(trRuEn(QStringLiteral("Найдено устройств: %1").arg(scan_.devices.size()),
+  statusLabel_->setText(trRuEn(QStringLiteral("Найдено iPhone: %1").arg(scan_.devices.size()),
                                QStringLiteral("Devices found: %1").arg(scan_.devices.size())));
   for (const auto& device : scan_.devices) {
     if (!device.info) {
       deviceList_->addItem(QStringLiteral("%1 · unknown").arg(device.idMasked));
       continue;
     }
-    QString line = QStringLiteral("%1 · %2 · %3 · build %4")
+    QString line = QStringLiteral("%1 · %2 · iOS %3 (%4)")
                        .arg(device.idMasked, device.info->product, device.info->ios,
                             device.info->build);
     if (device.compatibility.matchesTarget) {
-      line += QStringLiteral(" · matches_target=true");
+      line += trRuEn(QStringLiteral(" · поддерживается"), QStringLiteral(" · supported"));
     }
     deviceList_->addItem(line);
   }
@@ -593,8 +596,8 @@ void MainWindow::renderScan() {
 void MainWindow::renderIpa() {
   if (!ipa_) {
     ipaLabel_->setText(trRuEn(
-        QStringLiteral("IPA не выбран. Нужен подписанный IPA."),
-        QStringLiteral("No IPA selected. A signed IPA is required.")));
+        QStringLiteral("Файл приложения не выбран. Выберите подписанный файл MegaNugget (.ipa)."),
+        QStringLiteral("No app file selected. Choose a signed MegaNugget file (.ipa).")));
     installButton_->setEnabled(false);
     return;
   }
@@ -607,12 +610,12 @@ void MainWindow::renderTweaks() {
   const TweakDevice device = currentTweakDevice();
   const auto counts = TweakCatalog::instance().counts(device);
   tweaksMeta_->setText(
-      trRuEn(QStringLiteral("Цель: %1 / %2 · кандидаты %3 / %4 · ревизия %5")
+      trRuEn(QStringLiteral("Для %1 на iOS %2 · кандидатов %3 из %4 · версия каталога %5")
                  .arg(device.model, device.systemVersion)
                  .arg(counts.candidates)
                  .arg(counts.total)
                  .arg(TweakCatalog::instance().revision().left(12)),
-             QStringLiteral("Target: %1 / %2 · candidates %3 / %4 · revision %5")
+             QStringLiteral("For %1 on iOS %2 · candidates %3 of %4 · catalog version %5")
                  .arg(device.model, device.systemVersion)
                  .arg(counts.candidates)
                  .arg(counts.total)
@@ -659,18 +662,20 @@ void MainWindow::onApplyDetect() {
   const ApplyDetection detection = ApplyChannel::detect();
   QStringList lines;
   if (detection.devices.isEmpty()) {
-    lines << trRuEn(QStringLiteral("Устройств нет / ошибка: %1")
+    lines << trRuEn(QStringLiteral("iPhone не найден или произошла ошибка: %1")
                         .arg(detection.failures.join(QLatin1Char(','))),
-                    QStringLiteral("No devices / failure: %1")
+                    QStringLiteral("No iPhone found, or an error occurred: %1")
                         .arg(detection.failures.join(QLatin1Char(','))));
   }
   for (const auto& device : detection.devices) {
-    lines << QStringLiteral("%1 · %2 · %3 · matches_target=%4")
+    lines << QStringLiteral("%1 · %2 · iOS %3 · %4")
                  .arg(device.udidMasked,
                       device.product.isEmpty() ? QStringLiteral("?") : device.product,
                       device.ios.isEmpty() ? QStringLiteral("?") : device.ios)
-                 .arg(device.matchesTarget ? QStringLiteral("true")
-                                           : QStringLiteral("false"));
+                 .arg(device.matchesTarget
+                          ? trRuEn(QStringLiteral("поддерживается"), QStringLiteral("supported"))
+                          : trRuEn(QStringLiteral("не поддерживается"),
+                                   QStringLiteral("not supported")));
   }
   if (!detection.failures.isEmpty()) {
     lines << QStringLiteral("failures: %1").arg(detection.failures.join(QLatin1Char(',')));
@@ -680,7 +685,7 @@ void MainWindow::onApplyDetect() {
 
 void MainWindow::onChooseBackupDir() {
   const QString dir = QFileDialog::getExistingDirectory(
-      this, trRuEn(QStringLiteral("Папка для backup"), QStringLiteral("Backup folder")));
+      this, trRuEn(QStringLiteral("Папка для резервной копии"), QStringLiteral("Backup folder")));
   if (dir.isEmpty()) {
     return;
   }
@@ -695,14 +700,14 @@ void MainWindow::onStartBackup() {
   }
   if (backupDir_.isEmpty()) {
     applyLog_->setPlainText(
-        trRuEn(QStringLiteral("Сначала выберите папку backup."),
+        trRuEn(QStringLiteral("Сначала выберите папку для резервной копии."),
                QStringLiteral("Choose a backup folder first.")));
     return;
   }
   if (backupProcess_ && backupProcess_->state() != QProcess::NotRunning) {
     applyLog_->setPlainText(
-        trRuEn(QStringLiteral("Backup уже выполняется."),
-               QStringLiteral("A backup is already running.")));
+        trRuEn(QStringLiteral("Резервная копия уже создаётся."),
+               QStringLiteral("A backup is already in progress.")));
     return;
   }
 
@@ -729,10 +734,10 @@ void MainWindow::onStartBackup() {
   renderJournal();
   applyLog_->setPlainText(trRuEn(
       QStringLiteral(
-          "Backup запущен для %1…\nЭто может занять много времени. Не отключайте кабель.")
+          "Создаю резервную копию iPhone %1…\nЭто может занять много времени. Не отключайте кабель.")
           .arg(DeviceScanner::maskUdid(*udid)),
       QStringLiteral(
-          "Backup started for %1…\nThis can take a long time. Keep the cable connected.")
+          "Creating a backup of iPhone %1…\nThis can take a long time. Keep the cable connected.")
           .arg(DeviceScanner::maskUdid(*udid))));
   backupButton_->setEnabled(false);
   backupConsentBox_->setEnabled(false);
@@ -765,8 +770,8 @@ void MainWindow::onBackupFinished(int exitCode, QProcess::ExitStatus status) {
         err.contains(QStringLiteral("protocol version exchange"), Qt::CaseInsensitive)) {
       message += trRuEn(
           QStringLiteral(
-              "\n\nПодсказка: MSYS2 idevicebackup2 1.3.0 слишком старый для iOS 15+. "
-              "Нужна сборка libimobiledevice из git (1.4+/master)."),
+              "\n\nПодсказка: idevicebackup2 1.3.0 из MSYS2 слишком старый для iOS 15 и новее. "
+              "Нужна сборка libimobiledevice из git, версия 1.4 или новее."),
           QStringLiteral(
               "\n\nHint: MSYS2 idevicebackup2 1.3.0 is too old for iOS 15+. "
               "Build libimobiledevice from git (1.4+/master)."));
@@ -823,7 +828,7 @@ std::optional<QString> MainWindow::writeDraftToTemp(QString* error) const {
   QFile file(path);
   if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
     if (error) {
-      *error = trRuEn(QStringLiteral("Не удалось записать draft."),
+      *error = trRuEn(QStringLiteral("Не удалось сохранить черновик."),
                       QStringLiteral("Could not write draft."));
     }
     return std::nullopt;
@@ -906,7 +911,7 @@ void MainWindow::stopRestoreProcess() {
 
 void MainWindow::onChooseVerifiedBackup() {
   const QString dir = QFileDialog::getExistingDirectory(
-      this, trRuEn(QStringLiteral("Проверенный backup"), QStringLiteral("Verified backup")));
+      this, trRuEn(QStringLiteral("Проверенная резервная копия"), QStringLiteral("Verified backup")));
   if (dir.isEmpty()) {
     return;
   }
@@ -920,7 +925,7 @@ void MainWindow::onChooseVerifiedBackup() {
 
 void MainWindow::onVerifyVerifiedBackup() {
   if (verifiedBackupDir_.isEmpty()) {
-    appendApplyLog(trRuEn(QStringLiteral("Выберите папку backup."),
+    appendApplyLog(trRuEn(QStringLiteral("Сначала выберите папку для резервной копии."),
                           QStringLiteral("Choose a backup folder first.")));
     return;
   }
@@ -946,7 +951,7 @@ void MainWindow::onVerifyVerifiedBackup() {
 
 void MainWindow::onRunPlan() {
   if (verifiedBackupDir_.isEmpty()) {
-    appendApplyLog(trRuEn(QStringLiteral("Выберите проверенный backup."),
+    appendApplyLog(trRuEn(QStringLiteral("Сначала выберите проверенную резервную копию."),
                           QStringLiteral("Choose a verified backup first.")));
     return;
   }
@@ -984,7 +989,7 @@ void MainWindow::onRunPlan() {
     return;
   }
   journal_.record(JournalLevel::Info, JournalEvent::ChannelPlanFinished);
-  appendApplyLog(trRuEn(QStringLiteral("План OK:"), QStringLiteral("Plan OK:")));
+  appendApplyLog(trRuEn(QStringLiteral("План готов:"), QStringLiteral("Plan ready:")));
   appendApplyLog(formatPlanJson(result.stdoutJson));
   renderJournal();
 }
@@ -992,7 +997,7 @@ void MainWindow::onRunPlan() {
 void MainWindow::onChooseAppliedDir() {
   const QString dir = QFileDialog::getExistingDirectory(
       this,
-      trRuEn(QStringLiteral("Папка merged backup"), QStringLiteral("Merged backup folder")));
+      trRuEn(QStringLiteral("Папка для новой копии"), QStringLiteral("Folder for new copy")));
   if (dir.isEmpty()) {
     return;
   }
@@ -1002,7 +1007,7 @@ void MainWindow::onChooseAppliedDir() {
 
 void MainWindow::onRunMerge() {
   if (verifiedBackupDir_.isEmpty()) {
-    appendApplyLog(trRuEn(QStringLiteral("Нужен проверенный backup."),
+    appendApplyLog(trRuEn(QStringLiteral("Нужна проверенная резервная копия."),
                           QStringLiteral("A verified backup is required.")));
     return;
   }
@@ -1042,7 +1047,7 @@ void MainWindow::onRunMerge() {
     return;
   }
   journal_.record(JournalLevel::Info, JournalEvent::ChannelMergeFinished);
-  appendApplyLog(trRuEn(QStringLiteral("Merge OK:"), QStringLiteral("Merge OK:")));
+  appendApplyLog(trRuEn(QStringLiteral("Твик добавлен в копию:"), QStringLiteral("Tweak added to the copy:")));
   appendApplyLog(QString::fromUtf8(result.stdoutJson));
   renderJournal();
 }
@@ -1053,8 +1058,8 @@ void MainWindow::onRunRestore() {
     return;
   }
   if (appliedDir_.isEmpty() || !QFileInfo::exists(appliedDir_)) {
-    appendApplyLog(trRuEn(QStringLiteral("Сначала выполните merge в новую папку."),
-                          QStringLiteral("Run merge into a new folder first.")));
+    appendApplyLog(trRuEn(QStringLiteral("Сначала добавьте твик в копию в новой папке."),
+                          QStringLiteral("Add the tweak to a copy in a new folder first.")));
     return;
   }
   ApplyError error = ApplyError::DeviceNotFound;
@@ -1069,12 +1074,12 @@ void MainWindow::onRunRestore() {
   const auto reply = QMessageBox::warning(
       this, QStringLiteral("MegaNugget"),
       trRuEn(QStringLiteral(
-                 "Restore запишет merged backup на устройство %1 и перезагрузит iPhone. "
-                 "Будет восстановлена копия с SBHideLowPowerAlerts=true. Продолжить?")
+                 "Копия с твиком будет восстановлена на iPhone %1, после чего он перезагрузится. "
+                 "Всё, что изменилось на телефоне после резервной копии, пропадёт. Продолжить?")
                  .arg(DeviceScanner::maskUdid(*udid)),
              QStringLiteral(
-                 "Restore will write the merged backup to device %1 and reboot the iPhone. "
-                 "The copy includes SBHideLowPowerAlerts=true. Continue?")
+                 "The copy with the tweak will be restored to iPhone %1, and then it will reboot. "
+                 "Anything changed on the phone since the backup will be lost. Continue?")
                  .arg(DeviceScanner::maskUdid(*udid))),
       QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
   if (reply != QMessageBox::Yes) {
@@ -1095,8 +1100,8 @@ void MainWindow::onRunRestore() {
   }
 
   if (restoreProcess_ && restoreProcess_->state() != QProcess::NotRunning) {
-    appendApplyLog(trRuEn(QStringLiteral("Restore уже выполняется."),
-                          QStringLiteral("Restore is already running.")));
+    appendApplyLog(trRuEn(QStringLiteral("Восстановление уже идёт."),
+                          QStringLiteral("A restore is already in progress.")));
     return;
   }
 
@@ -1111,9 +1116,9 @@ void MainWindow::onRunRestore() {
   restoreProcess_->setArguments(ApplyChannelCli::restoreArgs(appliedDir_));
   journal_.record(JournalLevel::Info, JournalEvent::ChannelRestoreStarted);
   renderJournal();
-  appendApplyLog(trRuEn(QStringLiteral("Restore запущен для %1… Не отключайте USB.")
+  appendApplyLog(trRuEn(QStringLiteral("Восстанавливаю копию на iPhone %1… Не отключайте кабель.")
                             .arg(DeviceScanner::maskUdid(*udid)),
-                        QStringLiteral("Restore started for %1… Keep USB connected.")
+                        QStringLiteral("Restoring the copy to iPhone %1… Keep the cable connected.")
                             .arg(DeviceScanner::maskUdid(*udid))));
   restoreButton_->setEnabled(false);
   restoreConsentBox_->setEnabled(false);
@@ -1143,8 +1148,8 @@ void MainWindow::onRestoreFinished(int exitCode, QProcess::ExitStatus status) {
     return;
   }
   journal_.record(JournalLevel::Info, JournalEvent::ChannelRestoreFinished);
-  appendApplyLog(trRuEn(QStringLiteral("Restore завершён. Сделайте новый backup и запустите Effect."),
-                        QStringLiteral("Restore finished. Take a fresh backup and run Effect.")));
+  appendApplyLog(trRuEn(QStringLiteral("Восстановление завершено. Сделайте новую резервную копию и нажмите «Проверить результат»."),
+                        QStringLiteral("Restore finished. Create a new backup and press Check result.")));
   if (!out.isEmpty()) {
     appendApplyLog(QString::fromUtf8(out));
   }
@@ -1153,7 +1158,7 @@ void MainWindow::onRestoreFinished(int exitCode, QProcess::ExitStatus status) {
 
 void MainWindow::onChoosePostBackup() {
   const QString dir = QFileDialog::getExistingDirectory(
-      this, trRuEn(QStringLiteral("Post-restore backup"), QStringLiteral("Post-restore backup")));
+      this, trRuEn(QStringLiteral("Копия после восстановления"), QStringLiteral("Backup after restore")));
   if (dir.isEmpty()) {
     return;
   }
@@ -1163,8 +1168,8 @@ void MainWindow::onChoosePostBackup() {
 
 void MainWindow::onRunEffect() {
   if (verifiedBackupDir_.isEmpty() || postBackupDir_.isEmpty()) {
-    appendApplyLog(trRuEn(QStringLiteral("Нужны pre-backup (verified) и post-backup."),
-                          QStringLiteral("Need pre-backup (verified) and post-backup.")));
+    appendApplyLog(trRuEn(QStringLiteral("Нужны две копии: проверенная исходная и сделанная после восстановления."),
+                          QStringLiteral("Two backups are needed: the verified original and one made after the restore.")));
     return;
   }
   QString toolMessage;
@@ -1193,7 +1198,7 @@ void MainWindow::onRunEffect() {
     return;
   }
   journal_.record(JournalLevel::Info, JournalEvent::ChannelEffectFinished);
-  appendApplyLog(trRuEn(QStringLiteral("Effect:"), QStringLiteral("Effect:")));
+  appendApplyLog(trRuEn(QStringLiteral("Результат:"), QStringLiteral("Result:")));
   appendApplyLog(formatEffectJson(result.stdoutJson));
   renderJournal();
 }
