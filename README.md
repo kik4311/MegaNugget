@@ -15,14 +15,8 @@ MegaNugget включает **частичный порт кода GoldenNugget 
 Credits и лицензия сохранены в `LICENSES/GoldenNuggetMobile-*`; собственные
 брендинг и интерфейс MegaNugget не используют графику upstream.
 
-**Изменения от upstream (2026-11-06):** Foundation-каталог/компилятор интегрированы
-в MegaNuggetCore, добавлены строгие gates iOS 15–17 и оборудования, ограничение
-компиляции выбранными spec и новый редактор локальных XML-черновиков.
-Системное применение не перенесено. Подробности: [GOLDENNUGGET_PORT.md](docs/GOLDENNUGGET_PORT.md).
-
-Направление Dopamine остановлено. Старый `jb-orchestrator` оставлен для истории,
-исключён из Cargo default-members и не подключён к приложению. Старый
-`JailbreakEngine` остаётся заглушкой; в новом интерфейсе его кнопки нет.
+Что именно взято из GoldenNugget Mobile и как адаптировано под iOS 15–17,
+описано в [GOLDENNUGGET_PORT.md](docs/GOLDENNUGGET_PORT.md).
 
 Не используйте проект на чужих устройствах без разрешения владельца.
 
@@ -142,6 +136,7 @@ npm run build
 - [GitHub Actions и неподписанный iOS-артефакт](docs/GITHUB_BUILDS.md)
 - [Восстановление](docs/RECOVERY.md)
 - [Дорожная карта](docs/ROADMAP.md)
+- [Перенос кода GoldenNugget Mobile](docs/GOLDENNUGGET_PORT.md)
 - [Сторонние зависимости](docs/THIRD_PARTY.md)
 
 Основная лицензия проекта — AGPL-3.0 (см. LICENSE и LICENSING.md).
